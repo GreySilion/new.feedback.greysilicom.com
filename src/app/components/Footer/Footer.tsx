@@ -52,10 +52,10 @@ export default function Footer() {
               <img 
                 src="/images/logo/greysiliconlogo.png" 
                 alt="Grey Silicon Logo" 
-                className="h-12 w-auto"
+                className="h-16 w-auto"
               />
             </div>
-            <p className="text-slate-400 text-sm leading-6">
+            <p className="text-slate-400 text-sm leading-6 mt-4">
               Empowering businesses with actionable insights through powerful feedback management solutions.
             </p>
             <div className="flex items-center space-x-4 pt-2">
