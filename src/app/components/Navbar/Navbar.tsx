@@ -42,10 +42,11 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <span className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold">
-                GS
-              </span>
-              <span className="text-xl font-bold text-slate-900">Grey Silicon</span>
+              <img 
+                src="/images/logo/greysiliconlogo.png" 
+                alt="Grey Silicon Logo" 
+                className="h-10 w-auto"
+              />
             </Link>
           </div>
 
