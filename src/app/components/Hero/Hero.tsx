@@ -1,11 +1,10 @@
 'use client';
 
-'use client';
-
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-
 import { Variants } from 'framer-motion';
+import { useRef, useEffect } from 'react';
+import Typed from 'typed.js';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -31,6 +30,31 @@ const itemVariants: Variants = {
 };
 
 export default function Hero() {
+  const el = useRef<HTMLSpanElement>(null);
+  const typed = useRef<Typed | null>(null);
+
+  useEffect(() => {
+    if (!el.current) return;
+
+    const options = {
+      strings: [
+        'We value your opinion.',
+        'Share your experience with us.',
+        'Your feedback makes us better.'
+      ],
+      typeSpeed: 50,
+      backSpeed: 30,
+      backDelay: 2000,
+      loop: true,
+    };
+
+    typed.current = new Typed(el.current, options);
+
+    return () => {
+      typed.current?.destroy();
+    };
+  }, []);
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white pt-28 pb-20 md:pt-36 md:pb-28">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -89,10 +113,11 @@ export default function Hero() {
                   </div>
                   <div className="text-xs text-slate-400 font-mono">feedback.greysilicon.com</div>
                 </div>
-                <div className="space-y-4">
-                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-                  <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div className="h-32 flex items-center justify-center px-6">
+                  <span 
+                    ref={el} 
+                    className="text-center text-orange-500 text-2xl md:text-3xl font-bold min-h-[1.5em] block w-full"
+                  />
                 </div>
               </div>
             </div>
