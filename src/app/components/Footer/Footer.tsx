@@ -21,17 +21,17 @@ const navigation = {
   contact: [
     {
       icon: <EnvelopeIcon className="h-5 w-5 text-slate-400" />,
-      text: 'info@greysilicon.com',
-      href: 'mailto:info@greysilicon.com',
+      text: 'hello@greysilicon.com',
+      href: 'mailto:hello@greysilicon.com',
     },
     {
       icon: <PhoneIcon className="h-5 w-5 text-slate-400" />,
-      text: '+1 (555) 123-4567',
-      href: 'tel:+15551234567',
+      text: '+254 712 244 243 / +254 702 193 125',
+      href: '+254 712 244 243 / +254 702 193 125',
     },
     {
       icon: <MapPinIcon className="h-5 w-5 text-slate-400" />,
-      text: '123 Tech Street, Silicon Valley, CA 94025',
+      text: 'Nairobi, Kenya',
       href: '#',
     },
   ],
@@ -43,11 +43,12 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
-            <div className="flex items-center space-x-2">
-              <span className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold">
-                GS
-              </span>
-              <span className="text-xl font-bold text-white">Grey Silicon</span>
+            <div className="flex items-center">
+              <img 
+                src="/images/logo/greysiliconlogo.png" 
+                alt="Grey Silicon Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <p className="text-slate-400 text-sm leading-6">
               Empowering businesses with actionable insights through powerful feedback management solutions.
