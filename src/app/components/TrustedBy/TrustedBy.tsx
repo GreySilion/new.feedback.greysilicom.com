@@ -12,6 +12,7 @@ const TrustedBy = () => {
     { src: '/images/logo/SAF.png', alt: 'SAF' },
     { src: '/images/logo/razorpay.svg', alt: 'Razorpay' },
     { src: '/images/logo/meta.svg', alt: 'Meta' },
+    { src: '/images/logo/infrasoft.png', alt: 'Infrasoft' },
   ];
 
   return (
