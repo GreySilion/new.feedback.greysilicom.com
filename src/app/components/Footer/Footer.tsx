@@ -1,0 +1,128 @@
+// This is a Server Component by default
+import Link from 'next/link';
+import { EnvelopeIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
+
+const navigation = {
+  product: [
+    { name: 'Features', href: '#features' },
+    { name: 'Pricing', href: '#' },
+    { name: 'Testimonials', href: '#' },
+  ],
+  company: [
+    { name: 'About', href: '#about' },
+    { name: 'Blog', href: '#' },
+    { name: 'Careers', href: '#' },
+  ],
+  legal: [
+    { name: 'Privacy', href: '#' },
+    { name: 'Terms', href: '#' },
+    { name: 'Cookies', href: '#' },
+  ],
+  contact: [
+    {
+      icon: <EnvelopeIcon className="h-5 w-5 text-slate-400" />,
+      text: 'info@greysilicon.com',
+      href: 'mailto:info@greysilicon.com',
+    },
+    {
+      icon: <PhoneIcon className="h-5 w-5 text-slate-400" />,
+      text: '+1 (555) 123-4567',
+      href: 'tel:+15551234567',
+    },
+    {
+      icon: <MapPinIcon className="h-5 w-5 text-slate-400" />,
+      text: '123 Tech Street, Silicon Valley, CA 94025',
+      href: '#',
+    },
+  ],
+};
+
+export default function Footer() {
+  return (
+    <footer className="bg-slate-900 text-slate-400" aria-labelledby="footer-heading">
+      <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
+        <div className="xl:grid xl:grid-cols-3 xl:gap-8">
+          <div className="space-y-8">
+            <div className="flex items-center space-x-2">
+              <span className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold">
+                GS
+              </span>
+              <span className="text-xl font-bold text-white">Grey Silicon</span>
+            </div>
+            <p className="text-slate-400 text-sm leading-6">
+              Empowering businesses with actionable insights through powerful feedback management solutions.
+            </p>
+            <div className="flex space-x-6">
+              {[0, 1, 2, 3].map((item) => (
+                <a key={item} href="#" className="text-slate-400 hover:text-white">
+                  <span className="sr-only">Social media {item + 1}</span>
+                  <div className="h-6 w-6 bg-slate-700 rounded-full"></div>
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
+            <div className="md:grid md:grid-cols-3 md:gap-8">
+              <div>
+                <h3 className="text-sm font-semibold leading-6 text-white">Product</h3>
+                <ul role="list" className="mt-6 space-y-4">
+                  {navigation.product.map((item) => (
+                    <li key={item.name}>
+                      <a href={item.href} className="text-sm leading-6 text-slate-400 hover:text-white">
+                        {item.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-10 md:mt-0">
+                <h3 className="text-sm font-semibold leading-6 text-white">Company</h3>
+                <ul role="list" className="mt-6 space-y-4">
+                  {navigation.company.map((item) => (
+                    <li key={item.name}>
+                      <a href={item.href} className="text-sm leading-6 text-slate-400 hover:text-white">
+                        {item.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-10 md:mt-0">
+                <h3 className="text-sm font-semibold leading-6 text-white">Legal</h3>
+                <ul role="list" className="mt-6 space-y-4">
+                  {navigation.legal.map((item) => (
+                    <li key={item.name}>
+                      <a href={item.href} className="text-sm leading-6 text-slate-400 hover:text-white">
+                        {item.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="md:pl-12">
+              <h3 className="text-sm font-semibold leading-6 text-white">Contact us</h3>
+              <ul role="list" className="mt-6 space-y-4">
+                {navigation.contact.map((item, index) => (
+                  <li key={index} className="flex items-start">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {item.icon}
+                    </div>
+                    <a href={item.href} className="ml-3 text-sm leading-6 text-slate-400 hover:text-white">
+                      {item.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="mt-16 border-t border-slate-800 pt-8 sm:mt-20 lg:mt-24">
+          <p className="text-xs leading-5 text-slate-500">
+            &copy; {new Date().getFullYear()} Grey Silicon, Inc. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
