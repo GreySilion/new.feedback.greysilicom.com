@@ -4,6 +4,9 @@ import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { motion } from 'framer-motion';
 
+// Import TrustedBy component
+import TrustedBy from './components/TrustedBy/TrustedBy';
+
 // Dynamically import components with no SSR to avoid hydration mismatches
 const Navbar = dynamic(() => import('./components/Navbar/Navbar'), {
   ssr: false,
@@ -73,6 +76,7 @@ export default function Home() {
         <Navbar />
         <main className="flex-grow">
           <Hero />
+          <TrustedBy />
           {/* Features Section */}
           <section id="features" className="py-20 bg-white">
             <div className="container mx-auto px-4">
