@@ -1,6 +1,7 @@
 // This is a Server Component by default
 import Link from 'next/link';
 import { EnvelopeIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { Instagram, Twitter, Linkedin, Facebook } from 'lucide-react';
 
 const navigation = {
   product: [
@@ -41,6 +42,10 @@ export default function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-400" aria-labelledby="footer-heading">
       <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
+        <div className="flex flex-col items-center justify-center mb-12">
+          <h2 className="text-2xl font-bold text-white mb-6">Connect With Us</h2>
+          <div className="h-1 w-16 bg-blue-600 rounded-full mb-8"></div>
+        </div>
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
             <div className="flex items-center">
@@ -53,13 +58,43 @@ export default function Footer() {
             <p className="text-slate-400 text-sm leading-6">
               Empowering businesses with actionable insights through powerful feedback management solutions.
             </p>
-            <div className="flex space-x-6">
-              {[0, 1, 2, 3].map((item) => (
-                <a key={item} href="#" className="text-slate-400 hover:text-white">
-                  <span className="sr-only">Social media {item + 1}</span>
-                  <div className="h-6 w-6 bg-slate-700 rounded-full"></div>
-                </a>
-              ))}
+            <div className="flex items-center space-x-4 pt-2">
+              <a 
+                href="https://www.instagram.com/greysiliconlimited/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-pink-600 transition-colors duration-200 hover:scale-110"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://x.com/greysilicon47" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-black dark:hover:text-white transition-colors duration-200 hover:scale-110"
+                aria-label="Twitter"
+              >
+                <Twitter className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://www.linkedin.com/company/grey-silicon-limited/posts/?feedView=all" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors duration-200 hover:scale-110"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://www.facebook.com/greysilicon" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors duration-200 hover:scale-110"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-6 w-6" />
+              </a>
             </div>
           </div>
           <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
