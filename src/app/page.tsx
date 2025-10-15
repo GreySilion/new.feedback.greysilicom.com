@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 
 // Import components
 import FAQ from './components/FAQ/FAQ';
+import HowItWorks from './components/HowItWorks/HowItWorks';
 // Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
 
@@ -141,6 +142,9 @@ export default function Home() {
               </div>
             </div>
           </section>
+
+          {/* How It Works Section */}
+          <HowItWorks />
 
           {/* About Section */}
           <section id="about" className="py-16 bg-gray-50">
