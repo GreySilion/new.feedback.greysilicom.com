@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@formspree/react": "^3.0.0",
     "@heroicons/react": "^2.1.1",
     "@types/typed.js": "^2.0.0",
     "class-variance-authority": "^0.7.0",
