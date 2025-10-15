@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 // Import components
 import FAQ from './components/FAQ/FAQ';
@@ -102,7 +103,9 @@ export default function Home() {
                   {
                     title: 'Real-time Analytics',
                     description: 'Get insights and analytics on your feedback data in real-time.',
-                    icon: '📊'
+                    icon: '📊',
+                    link: '/dashboard/analytics',
+                    linkText: 'Learn More →'
                   },
                   {
                     title: 'Customizable',
@@ -118,25 +121,21 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                     whileHover={{ 
                       y: -10,
-                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                      transition: { duration: 0.2 }
                     }}
-                    className="group bg-white p-8 rounded-xl border border-gray-100 shadow-sm hover:border-blue-100 transition-all duration-300 cursor-pointer"
+                    className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow flex flex-col h-full"
                   >
-                    <div className="w-14 h-14 mb-6 rounded-xl bg-blue-50 flex items-center justify-center text-2xl group-hover:bg-blue-100 transition-colors duration-300">
-                      {feature.icon}
-                    </div>
-                    <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      {feature.description}
-                    </p>
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex items-center text-blue-600 font-medium group-hover:text-blue-700 transition-colors duration-300">
-                      Learn more
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </div>
+                    <div className="text-4xl mb-4">{feature.icon}</div>
+                    <h3 className="text-xl font-bold mb-2 text-gray-900">{feature.title}</h3>
+                    <p className="text-gray-600 mb-4 flex-grow">{feature.description}</p>
+                    {feature.link && (
+                      <Link 
+                        href={feature.link}
+                        className="mt-auto text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center transition-colors"
+                      >
+                        {feature.linkText}
+                      </Link>
+                    )}
                   </motion.div>
                 ))}
               </div>
