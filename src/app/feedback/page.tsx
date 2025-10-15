@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Footer from '@/app/components/Footer/Footer';
+import SimpleFooter from './components/SimpleFooter';
 
 const FeedbackPage = () => {
   const [rating, setRating] = useState(0);
@@ -83,7 +83,7 @@ const FeedbackPage = () => {
           )}
         </div>
       </main>
-      <Footer />
+      <SimpleFooter />
     </div>
   );
 };

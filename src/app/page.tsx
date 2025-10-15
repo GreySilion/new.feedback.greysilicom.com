@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { motion } from 'framer-motion';
 
+// Import components
+import FAQ from './components/FAQ/FAQ';
 // Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
 
@@ -154,6 +156,10 @@ export default function Home() {
               </div>
             </div>
           </section>
+          
+          {/* FAQ Section */}
+          <FAQ />
+          
         </main>
         <Footer />
       </Suspense>
