@@ -23,7 +23,16 @@ const FeedbackPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-blue-50">
-      <main className="flex-grow flex items-center justify-center p-4">
+      <main className="flex-grow flex flex-col items-center justify-center p-4">
+        {/* Company Logo/Image */}
+        <div className="mb-8 text-center">
+          <img 
+            src="/images/banners/we are open pic.jpg" 
+            alt="Company Logo" 
+            className="mx-auto h-24 w-auto object-contain"
+          />
+        </div>
+        
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
             We value your feedback ✨
@@ -79,7 +88,7 @@ const FeedbackPage = () => {
               >
                 Submit Feedback
               </button>
-            </form>
+              </form>
           )}
         </div>
       </main>

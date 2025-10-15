@@ -38,9 +38,9 @@ export default function Hero() {
 
     const options = {
       strings: [
-        'We value your opinion.',
-        'Share your experience with us.',
-        'Your feedback makes us better.'
+        'Understand your customers, grow your business — feedback turns opinions into opportunities.',
+        'Every review is a chance to improve, innovate, and build trust with your audience.',
+        'A strong feedback system isn’t just information; it’s your roadmap to better sales and happier customers.'
       ],
       typeSpeed: 50,
       backSpeed: 30,
