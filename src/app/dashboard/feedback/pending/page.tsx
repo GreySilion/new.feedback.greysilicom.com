@@ -1,8 +1,23 @@
-import { MessageSquare, Clock, Search, Filter, ChevronDown, MoreHorizontal } from 'lucide-react';
+'use client';
+
+import { MessageSquare, Clock, Search, Filter, ChevronDown, MoreHorizontal, Send, X } from 'lucide-react';
+import { useState } from 'react';
+
+interface FeedbackItem {
+  id: number;
+  name: string;
+  email: string;
+  rating: number;
+  comment: string;
+  date: string;
+  source: string;
+}
 
 export default function PendingFeedbackPage() {
-  // Mock data - will be replaced with real data
-  const pendingFeedback = [
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFeedback, setPendingFeedback] = useState<FeedbackItem[]>([
     {
       id: 1,
       name: 'John Doe',
@@ -30,7 +45,33 @@ export default function PendingFeedbackPage() {
       date: '2023-10-12T16:45:00Z',
       source: 'Website'
     }
-  ];
+  ]);
+
+  const handleReplyClick = (feedbackId: number) => {
+    setReplyingTo(replyingTo === feedbackId ? null : feedbackId);
+    setReplyText('');
+  };
+
+  const handleReplySubmit = (e: React.FormEvent, feedbackId: number) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+    
+    // In a real app, this would be an API call
+    console.log(`Replying to feedback ${feedbackId}:`, replyText);
+    
+    // Simulate API call
+    setIsSubmitting(true);
+    setTimeout(() => {
+      // Remove the replied feedback from pending
+      setPendingFeedback(prev => prev.filter(f => f.id !== feedbackId));
+      setReplyingTo(null);
+      setReplyText('');
+      setIsSubmitting(false);
+      
+      // In a real app, you would show a success message here
+      alert('Reply submitted successfully!');
+    }, 1000);
+  };
 
   const renderStars = (rating: number) => {
     return Array(5).fill(0).map((_, i) => (
@@ -100,14 +141,72 @@ export default function PendingFeedbackPage() {
                   </div>
                   
                   <p className="mt-2 text-sm text-gray-700">{feedback.comment}</p>
+                  
+                  {replyingTo === feedback.id && (
+                    <form 
+                      onSubmit={(e) => handleReplySubmit(e, feedback.id)}
+                      className="mt-4 border-t border-gray-100 pt-4"
+                    >
+                      <div className="relative">
+                        <textarea
+                          rows={3}
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          placeholder="Type your reply here..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleReplySubmit(e, feedback.id);
+                            }
+                          }}
+                        />
+                        <div className="mt-2 flex justify-end space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setReplyingTo(null)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            <X className="h-3.5 w-3.5 mr-1" />
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!replyText.trim() || isSubmitting}
+                            className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white ${
+                              !replyText.trim() || isSubmitting
+                                ? 'bg-blue-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                          >
+                            {isSubmitting ? (
+                              'Sending...'
+                            ) : (
+                              <>
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                                Send Reply
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
                 </div>
                 
-                <div className="ml-4 flex-shrink-0 flex">
-                  <button className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Reply
+                <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                  <button 
+                    onClick={() => handleReplyClick(feedback.id)}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm ${
+                      replyingTo === feedback.id 
+                        ? 'bg-gray-100 text-gray-700' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors`}
+                  >
+                    {replyingTo === feedback.id ? 'Cancel' : 'Reply'}
                   </button>
-                  <button className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <MoreHorizontal className="h-5 w-5" />
+                  <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </div>
               </div>
