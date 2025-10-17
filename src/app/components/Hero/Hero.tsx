@@ -40,12 +40,20 @@ export default function Hero() {
       strings: [
         'Understand your customers, grow your business — feedback turns opinions into opportunities.',
         'Every review is a chance to improve, innovate, and build trust with your audience.',
-        'A strong feedback system isn’t just information; it’s your roadmap to better sales and happier customers.'
+        'A strong feedback system isn\'t just information; it\'s your roadmap to better sales and happier customers.'
       ],
-      typeSpeed: 50,
-      backSpeed: 30,
+      typeSpeed: 40,
+      backSpeed: 25,
       backDelay: 2000,
       loop: true,
+      showCursor: false,
+      contentType: 'html',
+      preStringTyped: function() {
+        // Clear any inline styles that might be added
+        if (el.current) {
+          el.current.removeAttribute('style');
+        }
+      },
     };
 
     typed.current = new Typed(el.current, options);
@@ -72,13 +80,14 @@ export default function Hero() {
             <span className="text-blue-600"> Customer Feedback</span>
           </motion.h1>
           
-          <motion.p 
-            className="mt-6 text-lg leading-8 text-slate-600 max-w-2xl mx-auto"
+          <motion.div 
+            className="mt-6 text-lg leading-8 max-w-2xl mx-auto"
             variants={itemVariants}
           >
-            Transform customer insights into actionable improvements with Grey Silicon's powerful feedback management platform. 
-            Understand what your users really want and deliver exceptional experiences.
-          </motion.p>
+            <div className="text-blue-700 font-bold">
+              <span ref={el} />
+            </div>
+          </motion.div>
           
           <motion.div 
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
