@@ -11,6 +11,7 @@ import HowItWorks from './components/HowItWorks/HowItWorks';
 import PricingPlans from './components/PricingPlans/PricingPlans';
 // Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
+import PricingPlans from '@/components/PricingPlans';
 
 // Dynamically import components with no SSR to avoid hydration mismatches
 const Navbar = dynamic(() => import('./components/Navbar/Navbar'), {
@@ -145,7 +146,6 @@ export default function Home() {
 
           {/* How It Works Section */}
           <HowItWorks />
-
           {/* Pricing Plans Section */}
           <PricingPlans />
 
