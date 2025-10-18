@@ -9,6 +9,7 @@ import FAQ from './components/FAQ/FAQ';
 import HowItWorks from './components/HowItWorks/HowItWorks';
 // Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
+import PricingPlans from '@/components/PricingPlans';
 
 // Dynamically import components with no SSR to avoid hydration mismatches
 const Navbar = dynamic(() => import('./components/Navbar/Navbar'), {
@@ -145,6 +146,9 @@ export default function Home() {
 
           {/* How It Works Section */}
           <HowItWorks />
+
+          {/* Pricing Section */}
+          <PricingPlans />
 
           {/* About Section */}
           <section id="about" className="py-16 bg-gray-50">
