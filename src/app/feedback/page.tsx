@@ -9,16 +9,61 @@ const FeedbackPage = () => {
   const [hover, setHover] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ rating, comment });
-    setIsSubmitted(true);
-    // Reset form
-    setTimeout(() => {
+    
+    if (rating === 0) {
+      setError('Please select a rating');
+      return;
+    }
+    
+    if (!comment.trim()) {
+      setError('Please provide your feedback');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rating,
+          comment: comment.trim()
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit feedback');
+      }
+      
+      const data = await response.json();
+      console.log('Feedback submitted:', data);
+      setIsSubmitted(true);
+      
+      // Reset form after successful submission
       setRating(0);
       setComment('');
-      setIsSubmitted(false);
-    }, 3000);
+      
+      // Reset submission state after 3 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Error submitting feedback:', err);
+      setError(err instanceof Error ? err.message : 'Failed to submit feedback');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,11 +127,17 @@ const FeedbackPage = () => {
                 />
               </div>
 
+              {error && (
+                <div className="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
+                  {error}
+                </div>
+              )}
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                disabled={isSubmitting}
+                className={`w-full ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-75`}
               >
-                Submit Feedback
+                {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
               </button>
               </form>
           )}
