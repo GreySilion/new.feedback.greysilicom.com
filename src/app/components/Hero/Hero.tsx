@@ -100,10 +100,10 @@ export default function Hero() {
               Give Feedback
             </Link>
             <Link
-              href="#features"
+              href="/auth/login"
               className="px-6 py-3.5 text-base font-medium text-blue-600 hover:text-blue-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              Learn More
+              Get started now
             </Link>
           </motion.div>
           
