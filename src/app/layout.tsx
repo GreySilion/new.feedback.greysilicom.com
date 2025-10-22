@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Suspense } from 'react';
+import ClientLayout from './ClientLayout';
 import Loading from './loading';
 
 const inter = Inter({
@@ -34,11 +35,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} font-sans`} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-screen bg-white font-sans antialiased">
         <Suspense fallback={<Loading />}>
-          <div className="relative flex min-h-screen flex-col">
+          <ClientLayout>
             {children}
-          </div>
+          </ClientLayout>
         </Suspense>
       </body>
     </html>

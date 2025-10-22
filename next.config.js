@@ -3,8 +3,8 @@ const nextConfig = {
   // Enable static exports for the standalone output
   output: 'standalone',
   
-  // Add trailing slash to help with static exports
-  trailingSlash: true,
+  // Remove trailing slash to prevent routing issues
+  trailingSlash: false,
   
   // Enable React strict mode
   reactStrictMode: true,
