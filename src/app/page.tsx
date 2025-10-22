@@ -8,7 +8,7 @@ import Link from 'next/link';
 // Import components
 import FAQ from './components/FAQ/FAQ';
 import HowItWorks from './components/HowItWorks/HowItWorks';
-import PricingPlans from './components/PricingPlans/PricingPlans';
+import PricingPlans from '@/components/PricingPlans';
 // Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
 
@@ -145,7 +145,6 @@ export default function Home() {
 
           {/* How It Works Section */}
           <HowItWorks />
-
           {/* Pricing Plans Section */}
           <PricingPlans />
 
