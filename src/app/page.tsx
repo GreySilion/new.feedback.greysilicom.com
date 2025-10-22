@@ -9,7 +9,6 @@ import Link from 'next/link';
 import FAQ from './components/FAQ/FAQ';
 import HowItWorks from './components/HowItWorks/HowItWorks';
 import PricingPlans from '@/components/PricingPlans';
-// Import TrustedBy component
 import TrustedBy from './components/TrustedBy/TrustedBy';
 
 // Dynamically import components with no SSR to avoid hydration mismatches
@@ -32,14 +31,14 @@ const Navbar = dynamic(() => import('./components/Navbar/Navbar'), {
 const Hero = dynamic(() => import('./components/Hero/Hero'), {
   ssr: false,
   loading: () => (
-    <section className="pt-24 pb-16 md:pt-32 md:pb-24">
+    <section className="pt-24 pb-16 md:pt-32 md:pb-24 bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="h-12 bg-gray-200 animate-pulse rounded-lg w-3/4 mx-auto mb-6"></div>
-          <div className="h-6 bg-gray-200 animate-pulse rounded w-1/2 mx-auto mb-8"></div>
-          <div className="flex justify-center space-x-4">
-            <div className="h-12 w-32 bg-blue-200 animate-pulse rounded-lg"></div>
-            <div className="h-12 w-32 bg-gray-200 animate-pulse rounded-lg"></div>
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="h-12 bg-gray-200 animate-pulse rounded w-3/4 mx-auto"></div>
+          <div className="h-6 bg-gray-200 animate-pulse rounded w-1/2 mx-auto"></div>
+          <div className="flex justify-center space-x-4 pt-4">
+            <div className="h-12 w-32 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-12 w-32 bg-gray-200 animate-pulse rounded"></div>
           </div>
         </div>
       </div>
@@ -50,18 +49,22 @@ const Hero = dynamic(() => import('./components/Hero/Hero'), {
 const Footer = dynamic(() => import('./components/Footer/Footer'), {
   ssr: false,
   loading: () => (
-    <footer className="bg-gray-50 border-t border-gray-200 mt-12">
-      <div className="container mx-auto px-4 py-12">
-        <div className="h-8 w-32 bg-gray-200 animate-pulse rounded mb-6"></div>
+    <footer className="bg-gray-900 text-white pt-16 pb-8">
+      <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-6 w-24 bg-gray-200 animate-pulse rounded mb-4"></div>
-              {[...Array(3)].map((_, j) => (
-                <div key={j} className="h-4 w-32 bg-gray-100 animate-pulse rounded"></div>
-              ))}
+            <div key={i} className="space-y-4">
+              <div className="h-6 w-24 bg-gray-700 animate-pulse rounded"></div>
+              <div className="space-y-2">
+                {[...Array(4)].map((_, j) => (
+                  <div key={j} className="h-4 w-32 bg-gray-700 animate-pulse rounded"></div>
+                ))}
+              </div>
             </div>
           ))}
+        </div>
+        <div className="border-t border-gray-800 mt-12 pt-8 text-center">
+          <div className="h-4 w-48 bg-gray-700 animate-pulse rounded mx-auto"></div>
         </div>
       </div>
     </footer>
@@ -70,105 +73,65 @@ const Footer = dynamic(() => import('./components/Footer/Footer'), {
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Suspense
-        fallback={
-          <div className="fixed inset-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        }
-      >
-        <Navbar />
-        <main className="flex-grow">
+    <div className="min-h-screen flex flex-col bg-white">
+      <Navbar />
+      
+      <main className="flex-grow">
+        <Suspense fallback={null}>
           <Hero />
-          <TrustedBy />
-          {/* Features Section */}
-          <section id="features" className="py-20 bg-white">
-            <div className="container mx-auto px-4">
-              <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent"
-              >
-                Connect your business directly with your customers.
-              </motion.h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                {[
-                  {
-                    title: 'Easy to Use',
-                    description: 'Simple and intuitive interface for collecting feedback from your users.',
-                    icon: '👋'
-                  },
-                  {
-                    title: 'Real-time Analytics',
-                    description: 'Get insights and analytics on your feedback data in real-time.',
-                    icon: '📊',
-                    link: '/dashboard/analytics',
-                    linkText: 'Learn More →'
-                  },
-                  {
-                    title: 'Customizable',
-                    description: 'Tailor the feedback form to match your brand and requirements.',
-                    icon: '🎨'
-                  }
-                ].map((feature, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ 
-                      y: -10,
-                      transition: { duration: 0.2 }
-                    }}
-                    className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow flex flex-col h-full"
-                  >
-                    <div className="text-4xl mb-4">{feature.icon}</div>
-                    <h3 className="text-xl font-bold mb-2 text-gray-900">{feature.title}</h3>
-                    <p className="text-gray-600 mb-4 flex-grow">{feature.description}</p>
-                    {feature.link && (
-                      <Link 
-                        href={feature.link}
-                        className="mt-auto text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center transition-colors"
-                      >
-                        {feature.linkText}
-                      </Link>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* How It Works Section */}
-          <HowItWorks />
-          {/* Pricing Plans Section */}
-          <PricingPlans />
-
-          {/* About Section */}
-          <section id="about" className="py-16 bg-gray-50">
-            <div className="container mx-auto px-4">
-              <h2 className="text-3xl font-bold text-center mb-12">About Us</h2>
-              <div className="max-w-3xl mx-auto text-center">
-                <p className="text-lg text-gray-600 mb-6">
-                  We're dedicated to helping businesses collect and analyze customer feedback to improve their products and services.
-                </p>
-                <p className="text-gray-600">
-                  Our mission is to make it easy for companies to understand their customers and make data-driven decisions.
-                </p>
-              </div>
-            </div>
-          </section>
           
-          {/* FAQ Section */}
+          <TrustedBy />
+          
+          <motion.section 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="py-16 md:py-24 bg-white"
+          >
+            <div className="container mx-auto px-4">
+              <div className="max-w-4xl mx-auto text-center mb-16">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                  How It Works
+                </h2>
+                <p className="text-lg text-gray-600">
+                  Get valuable insights from your customers with our easy-to-use feedback system
+                </p>
+              </div>
+              <HowItWorks />
+            </div>
+          </motion.section>
+          
+          <PricingPlans />
+          
           <FAQ />
           
-        </main>
-        <Footer />
-      </Suspense>
+          <section className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-16 md:py-24">
+            <div className="container mx-auto px-4 text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to get started?</h2>
+              <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+                Join thousands of businesses that trust us to collect and analyze their customer feedback.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 md:py-4 md:text-lg md:px-10 transition-colors"
+                >
+                  Get Started Free
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-base font-medium rounded-md text-white hover:bg-white hover:bg-opacity-10 md:py-4 md:text-lg md:px-10 transition-colors"
+                >
+                  Contact Sales
+                </Link>
+              </div>
+            </div>
+          </section>
+        </Suspense>
+      </main>
+      
+      <Footer />
     </div>
   );
 }
