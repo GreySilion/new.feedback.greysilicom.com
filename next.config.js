@@ -1,8 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable static exports for the standalone output
+  output: 'standalone',
+  
+  // Remove trailing slash to prevent routing issues
+  trailingSlash: false,
+  
+  // Enable React strict mode
   reactStrictMode: true,
-  // swcMinify is enabled by default in Next.js 15+
+  
+  // Configure page extensions
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  
+  // Image optimization
   images: {
+    unoptimized: true, // Disable image optimization for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -10,15 +22,56 @@ const nextConfig = {
       },
     ],
   },
+  
+  // Webpack configuration
+  webpack: (config, { isServer }) => {
+    // Fixes npm packages that depend on `fs` module
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+      };
+    }
+    
+    return config;
+  },
+  
+  // ESLint configuration
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  
+  // TypeScript configuration
   typescript: {
-    // Warning: This allows production builds to successfully complete even when
-    // your project has type errors.
     ignoreBuildErrors: true,
+  },
+  
+  // Enable source maps in development
+  productionBrowserSourceMaps: process.env.NODE_ENV === 'development',
+  
+  // Add custom headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
   },
 };
 
