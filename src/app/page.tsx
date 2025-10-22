@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 // Import components
 const FAQ = dynamic(() => import('./components/FAQ/FAQ'), { ssr: false });
+const Features = dynamic(() => import('./components/Features/Features'), { ssr: false });
 const HowItWorks = dynamic(() => import('./components/HowItWorks/HowItWorks'), { ssr: false });
 const PricingPlans = dynamic(() => import('@/components/PricingPlans'), { ssr: false });
 const TrustedBy = dynamic(() => import('./components/TrustedBy/TrustedBy'), { ssr: false });
@@ -85,6 +86,10 @@ function HomeContent() {
       
       <main className="flex-grow">
         <Hero />
+        
+        <Suspense fallback={null}>
+          <Features />
+        </Suspense>
         
         <TrustedBy />
         
