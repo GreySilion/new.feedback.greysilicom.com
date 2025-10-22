@@ -2,44 +2,63 @@ import {
   ArrowUpRight, 
   MessageSquare, 
   Star, 
-  TrendingUp, 
   Calendar, 
-  Smile, 
+  Smile,
   BarChart3, 
-  Settings 
+  Settings,
+  TrendingUp
 } from 'lucide-react';
 
-export default function DashboardPage() {
+async function getDashboardStats() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/dashboard/stats`, {
+      next: { revalidate: 60 } // Revalidate every 60 seconds
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard stats');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return null;
+  }
+}
+
+export default async function DashboardPage() {
+  const statsData = await getDashboardStats();
+
   const stats = [
     {
       title: 'Average Rating',
-      value: '4.2',
-      change: '+0.3',
+      value: statsData?.averageRating || '0.0',
+      change: 'N/A',
       icon: <Star className="h-6 w-6 text-amber-400" />,
       color: 'bg-amber-100',
       textColor: 'text-amber-700',
     },
     {
       title: 'Total Feedback',
-      value: '1,248',
-      change: '+12%',
+      value: statsData?.totalFeedback?.toLocaleString() || '0',
+      change: 'N/A',
       icon: <MessageSquare className="h-6 w-6 text-blue-500" />,
       color: 'bg-blue-100',
       textColor: 'text-blue-700',
     },
     {
       title: 'Feedback This Month',
-      value: '156',
-      change: '+8%',
+      value: statsData?.feedbackThisMonth?.toLocaleString() || '0',
+      change: 'N/A',
       icon: <Calendar className="h-6 w-6 text-emerald-500" />,
       color: 'bg-emerald-100',
       textColor: 'text-emerald-700',
     },
     {
-      title: 'Most Common Sentiment',
-      value: 'Positive',
-      change: '+5%',
-      icon: <Smile className="h-6 w-6 text-green-500" />,
+      title: 'Most Common Rating',
+      value: statsData?.mostCommonRating ? `${statsData.mostCommonRating}★` : 'N/A',
+      change: 'N/A',
+      icon: <BarChart3 className="h-6 w-6 text-green-500" />,
       color: 'bg-green-100',
       textColor: 'text-green-700',
     },
