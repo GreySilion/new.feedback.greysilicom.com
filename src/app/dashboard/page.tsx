@@ -8,6 +8,7 @@ import {
   Settings,
   TrendingUp
 } from 'lucide-react';
+import { getCurrentUser } from '@/lib/auth';
 
 async function getDashboardStats() {
   try {
@@ -27,7 +28,12 @@ async function getDashboardStats() {
 }
 
 export default async function DashboardPage() {
-  const statsData = await getDashboardStats();
+  const [currentUser, statsData] = await Promise.all([
+    getCurrentUser(),
+    getDashboardStats()
+  ]);
+  
+  const userName = currentUser?.name || 'User';
 
   const stats = [
     {
@@ -70,7 +76,7 @@ export default async function DashboardPage() {
       <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Welcome back, John! 👋</h2>
+            <h1 className="text-2xl font-bold">Welcome back, {userName}</h1>
             <p className="mt-1 text-blue-100">Here's what's happening with your feedback today.</p>
           </div>
           <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30 md:mt-0">
