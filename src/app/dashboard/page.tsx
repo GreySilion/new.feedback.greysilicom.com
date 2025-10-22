@@ -2,44 +2,69 @@ import {
   ArrowUpRight, 
   MessageSquare, 
   Star, 
-  TrendingUp, 
   Calendar, 
-  Smile, 
+  Smile,
   BarChart3, 
-  Settings 
+  Settings,
+  TrendingUp
 } from 'lucide-react';
+import { getCurrentUser } from '@/lib/auth';
 
-export default function DashboardPage() {
+async function getDashboardStats() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/dashboard/stats`, {
+      next: { revalidate: 60 } // Revalidate every 60 seconds
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard stats');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return null;
+  }
+}
+
+export default async function DashboardPage() {
+  const [currentUser, statsData] = await Promise.all([
+    getCurrentUser(),
+    getDashboardStats()
+  ]);
+  
+  const userName = currentUser?.name || 'User';
+
   const stats = [
     {
       title: 'Average Rating',
-      value: '4.2',
-      change: '+0.3',
+      value: statsData?.averageRating || '0.0',
+      change: 'N/A',
       icon: <Star className="h-6 w-6 text-amber-400" />,
       color: 'bg-amber-100',
       textColor: 'text-amber-700',
     },
     {
       title: 'Total Feedback',
-      value: '1,248',
-      change: '+12%',
+      value: statsData?.totalFeedback?.toLocaleString() || '0',
+      change: 'N/A',
       icon: <MessageSquare className="h-6 w-6 text-blue-500" />,
       color: 'bg-blue-100',
       textColor: 'text-blue-700',
     },
     {
       title: 'Feedback This Month',
-      value: '156',
-      change: '+8%',
+      value: statsData?.feedbackThisMonth?.toLocaleString() || '0',
+      change: 'N/A',
       icon: <Calendar className="h-6 w-6 text-emerald-500" />,
       color: 'bg-emerald-100',
       textColor: 'text-emerald-700',
     },
     {
-      title: 'Most Common Sentiment',
-      value: 'Positive',
-      change: '+5%',
-      icon: <Smile className="h-6 w-6 text-green-500" />,
+      title: 'Most Common Rating',
+      value: statsData?.mostCommonRating ? `${statsData.mostCommonRating}★` : 'N/A',
+      change: 'N/A',
+      icon: <BarChart3 className="h-6 w-6 text-green-500" />,
       color: 'bg-green-100',
       textColor: 'text-green-700',
     },
@@ -51,7 +76,7 @@ export default function DashboardPage() {
       <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Welcome back, John! 👋</h2>
+            <h1 className="text-2xl font-bold">Welcome back, {userName}</h1>
             <p className="mt-1 text-blue-100">Here's what's happening with your feedback today.</p>
           </div>
           <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30 md:mt-0">
