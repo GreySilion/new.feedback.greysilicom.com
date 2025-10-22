@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,9 +10,11 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const redirectTo = searchParams.get('from') || '/dashboard';
 
   const formSchema = z.object({
     email: z.string().email('Please enter a valid email address'),
@@ -38,7 +40,7 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,8 +54,8 @@ export default function LoginPage() {
         throw new Error(result.message || 'Login failed');
       }
 
-      // Redirect to dashboard on successful login
-      router.push('/dashboard');
+      // Redirect to the original page or dashboard on successful login
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
@@ -144,9 +146,21 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                  Remember me
+                </label>
+              </div>
+
               <a
-                href="#"
+                href="/forgot-password"
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Forgot password?
@@ -172,6 +186,13 @@ export default function LoginPage() {
               )}
             </motion.button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Don't have an account?{' '}
+            <a href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign up
+            </a>
+          </p>
         </div>
       </motion.div>
     </div>
