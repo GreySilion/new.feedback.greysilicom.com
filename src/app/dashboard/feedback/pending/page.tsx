@@ -1,76 +1,103 @@
 'use client';
 
 import { MessageSquare, Clock, Search, Filter, ChevronDown, MoreHorizontal, Send, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface FeedbackItem {
   id: number;
   name: string;
   email: string;
   rating: number;
-  comment: string;
+  review: string;
+  comment?: string; // For backward compatibility
+  created_at: string;
   date: string;
   source: string;
+  user_id: number | null;
+  [key: string]: any; // For any additional properties
 }
 
 export default function PendingFeedbackPage() {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingFeedback, setPendingFeedback] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      rating: 4,
-      comment: 'Great service, but the delivery was a bit late.',
-      date: '2023-10-14T14:30:00Z',
-      source: 'Website'
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      rating: 2,
-      comment: 'Product was damaged on arrival. Very disappointed.',
-      date: '2023-10-13T09:15:00Z',
-      source: 'Mobile App'
-    },
-    {
-      id: 3,
-      name: 'Alex Johnson',
-      email: 'alex@example.com',
-      rating: 5,
-      comment: 'Excellent product quality and fast shipping!',
-      date: '2023-10-12T16:45:00Z',
-      source: 'Website'
-    }
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingFeedback, setPendingFeedback] = useState<FeedbackItem[]>([]);
+  
+  useEffect(() => {
+    const fetchPendingFeedback = async () => {
+      try {
+        const response = await fetch('/api/feedback/pending');
+        if (!response.ok) {
+          throw new Error('Failed to fetch pending feedback');
+        }
+        const data = await response.json();
+        setPendingFeedback(data);
+      } catch (error) {
+        console.error('Error fetching pending feedback:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPendingFeedback();
+  }, []);
 
   const handleReplyClick = (feedbackId: number) => {
+    // Toggle the reply form
     setReplyingTo(replyingTo === feedbackId ? null : feedbackId);
     setReplyText('');
   };
 
-  const handleReplySubmit = (e: React.FormEvent, feedbackId: number) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  const handleReplySubmit = async (e: React.FormEvent, feedbackId: number) => {
     e.preventDefault();
     if (!replyText.trim()) return;
     
-    // In a real app, this would be an API call
-    console.log(`Replying to feedback ${feedbackId}:`, replyText);
-    
-    // Simulate API call
     setIsSubmitting(true);
-    setTimeout(() => {
-      // Remove the replied feedback from pending
-      setPendingFeedback(prev => prev.filter(f => f.id !== feedbackId));
+    try {
+      const response = await fetch('/api/feedback/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reviewId: feedbackId,
+          reply: replyText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit reply');
+      }
+
+      // Remove the replied feedback from the pending list
+      setPendingFeedback(prev => prev.filter(fb => fb.id !== feedbackId));
       setReplyingTo(null);
       setReplyText('');
+    } catch (error) {
+      console.error('Error submitting reply:', error);
+      alert('Failed to submit reply. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      
-      // In a real app, you would show a success message here
-      alert('Reply submitted successfully!');
-    }, 1000);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -123,7 +150,7 @@ export default function PendingFeedbackPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{feedback.name}</p>
-                      <p className="text-sm text-gray-500">{feedback.email}</p>
+                      <span className="text-sm text-gray-500">{formatDate(feedback.created_at)}</span>
                     </div>
                   </div>
                   
@@ -132,15 +159,15 @@ export default function PendingFeedbackPage() {
                       {renderStars(feedback.rating)}
                     </div>
                     <span className="mx-1">•</span>
-                    <time dateTime={feedback.date} className="flex items-center">
+                    <time dateTime={feedback.date || feedback.created_at} className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
-                      {new Date(feedback.date).toLocaleDateString()}
+                      {formatDate(feedback.date || feedback.created_at)}
                     </time>
                     <span className="mx-1">•</span>
                     <span>{feedback.source}</span>
                   </div>
                   
-                  <p className="mt-2 text-sm text-gray-700">{feedback.comment}</p>
+                  <p className="mt-2 text-sm text-gray-700">{feedback.review || feedback.comment}</p>
                   
                   {replyingTo === feedback.id && (
                     <form 

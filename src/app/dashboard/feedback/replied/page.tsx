@@ -1,45 +1,61 @@
+'use client';
+
 import { MessageSquare, CheckCircle, Search, Filter, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+interface FeedbackItem {
+  id: number;
+  name: string;
+  email: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  replied_at: string;
+  reply: string;
+  source: string;
+  user_id: number;
+}
 
 export default function RepliedFeedbackPage() {
-  // Mock data - will be replaced with real data
-  const repliedFeedback = [
-    {
-      id: 1,
-      name: 'Sarah Williams',
-      email: 'sarah@example.com',
-      rating: 5,
-      comment: 'Amazing customer service! The issue was resolved quickly.',
-      reply: 'Thank you for your kind words, Sarah! We\'re thrilled to hear about your positive experience with our support team.',
-      date: '2023-10-14T10:30:00Z',
-      replyDate: '2023-10-14T11:15:00Z',
-      source: 'Website',
-      status: 'resolved'
-    },
-    {
-      id: 2,
-      name: 'Michael Brown',
-      email: 'michael@example.com',
-      rating: 3,
-      comment: 'Product quality is good but the delivery was delayed.',
-      reply: 'We apologize for the delay in delivery, Michael. We\'ve issued a 10% discount on your next purchase as compensation.',
-      date: '2023-10-13T09:15:00Z',
-      replyDate: '2023-10-13T10:45:00Z',
-      source: 'Mobile App',
-      status: 'resolved'
-    },
-    {
-      id: 3,
-      name: 'Emily Chen',
-      email: 'emily@example.com',
-      rating: 4,
-      comment: 'Good experience overall, but the mobile app could use some improvements.',
-      reply: 'Thank you for your feedback, Emily! We\'ve shared your suggestions with our development team for future updates.',
-      date: '2023-10-12T16:45:00Z',
-      replyDate: '2023-10-12T17:30:00Z',
-      source: 'Website',
-      status: 'acknowledged'
-    }
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [repliedFeedback, setRepliedFeedback] = useState<FeedbackItem[]>([]);
+  
+  useEffect(() => {
+    const fetchRepliedFeedback = async () => {
+      try {
+        const response = await fetch('/api/feedback/replied');
+        if (!response.ok) {
+          throw new Error('Failed to fetch replied feedback');
+        }
+        const data = await response.json();
+        setRepliedFeedback(data);
+      } catch (error) {
+        console.error('Error fetching replied feedback:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRepliedFeedback();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const renderStars = (rating: number) => {
     return Array(5).fill(0).map((_, i) => (
@@ -106,7 +122,7 @@ export default function RepliedFeedbackPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">{feedback.name}</p>
-                        <p className="text-sm text-gray-500">{feedback.email}</p>
+                        <span className="text-sm text-gray-500">{formatDate(feedback.created_at)}</span>
                       </div>
                     </div>
                     {getStatusBadge(feedback.status)}
