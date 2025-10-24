@@ -1,76 +1,119 @@
 'use client';
 
 import { MessageSquare, Clock, Search, Filter, ChevronDown, MoreHorizontal, Send, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface FeedbackItem {
   id: number;
   name: string;
   email: string;
   rating: number;
-  comment: string;
+  review: string;
+  comment?: string; // For backward compatibility
+  created_at: string;
   date: string;
   source: string;
+  user_id: number | null;
+  [key: string]: any; // For any additional properties
 }
 
 export default function PendingFeedbackPage() {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingFeedback, setPendingFeedback] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      rating: 4,
-      comment: 'Great service, but the delivery was a bit late.',
-      date: '2023-10-14T14:30:00Z',
-      source: 'Website'
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      rating: 2,
-      comment: 'Product was damaged on arrival. Very disappointed.',
-      date: '2023-10-13T09:15:00Z',
-      source: 'Mobile App'
-    },
-    {
-      id: 3,
-      name: 'Alex Johnson',
-      email: 'alex@example.com',
-      rating: 5,
-      comment: 'Excellent product quality and fast shipping!',
-      date: '2023-10-12T16:45:00Z',
-      source: 'Website'
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingFeedback, setPendingFeedback] = useState<FeedbackItem[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+  
+  const fetchPendingFeedback = async (page: number = 1) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/feedback/pending?page=${page}&limit=${pagination.limit}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending feedback');
+      }
+      const { data, pagination: paginationData } = await response.json();
+      setPendingFeedback(data);
+      setPagination(paginationData);
+    } catch (error) {
+      console.error('Error fetching pending feedback:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchPendingFeedback(pagination.page);
+  }, [pagination.page]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
+    }
+  };
 
   const handleReplyClick = (feedbackId: number) => {
+    // Toggle the reply form
     setReplyingTo(replyingTo === feedbackId ? null : feedbackId);
     setReplyText('');
   };
 
-  const handleReplySubmit = (e: React.FormEvent, feedbackId: number) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  const handleReplySubmit = async (e: React.FormEvent, feedbackId: number) => {
     e.preventDefault();
     if (!replyText.trim()) return;
     
-    // In a real app, this would be an API call
-    console.log(`Replying to feedback ${feedbackId}:`, replyText);
-    
-    // Simulate API call
     setIsSubmitting(true);
-    setTimeout(() => {
-      // Remove the replied feedback from pending
-      setPendingFeedback(prev => prev.filter(f => f.id !== feedbackId));
+    try {
+      const response = await fetch('/api/feedback/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reviewId: feedbackId,
+          reply: replyText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit reply');
+      }
+
+      // Refresh the current page to show updated list
+      fetchPendingFeedback(pagination.page);
       setReplyingTo(null);
       setReplyText('');
+    } catch (error) {
+      console.error('Error submitting reply:', error);
+      alert('Failed to submit reply. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      
-      // In a real app, you would show a success message here
-      alert('Reply submitted successfully!');
-    }, 1000);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -123,7 +166,7 @@ export default function PendingFeedbackPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{feedback.name}</p>
-                      <p className="text-sm text-gray-500">{feedback.email}</p>
+                      <span className="text-sm text-gray-500">{formatDate(feedback.created_at)}</span>
                     </div>
                   </div>
                   
@@ -132,15 +175,15 @@ export default function PendingFeedbackPage() {
                       {renderStars(feedback.rating)}
                     </div>
                     <span className="mx-1">•</span>
-                    <time dateTime={feedback.date} className="flex items-center">
+                    <time dateTime={feedback.date || feedback.created_at} className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
-                      {new Date(feedback.date).toLocaleDateString()}
+                      {formatDate(feedback.date || feedback.created_at)}
                     </time>
                     <span className="mx-1">•</span>
                     <span>{feedback.source}</span>
                   </div>
                   
-                  <p className="mt-2 text-sm text-gray-700">{feedback.comment}</p>
+                  <p className="mt-2 text-sm text-gray-700">{feedback.review || feedback.comment}</p>
                   
                   {replyingTo === feedback.id && (
                     <form 
@@ -221,6 +264,89 @@ export default function PendingFeedbackPage() {
             <p className="mt-1 text-sm text-gray-500">All caught up! Check back later for new feedback.</p>
           </div>
         )}
+      </div>
+      
+      {/* Pagination */}
+      <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPreviousPage}
+            className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${pagination.hasPreviousPage ? 'bg-white text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+            className={`relative ml-3 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${pagination.hasNextPage ? 'bg-white text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{' '}
+              of <span className="font-medium">{pagination.total}</span> results
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPreviousPage}
+                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${!pagination.hasPreviousPage ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Page numbers */}
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                // Show pages around current page
+                let pageNum;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.page - 2 + i;
+                }
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${pagination.page === pageNum 
+                      ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600' 
+                      : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage}
+                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${!pagination.hasNextPage ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
       </div>
     </div>
   );
