@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '10');
+  const offset = (page - 1) * limit;
+  
   let connection;
   try {
     connection = await pool.getConnection();
 
-    // Fetch all replied feedback (where reply is NOT NULL and not empty)
+    // Fetch paginated replied feedback (where reply is NOT NULL and not empty)
     const [rows] = await connection.query(
       `SELECT 
           r.*, 
@@ -15,10 +20,31 @@ export async function GET() {
        FROM reviews r
        LEFT JOIN users u ON r.user_id = u.id
        WHERE r.reply IS NOT NULL AND r.reply != ''
-       ORDER BY r.updated_at DESC`
+       ORDER BY r.updated_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
 
-    return NextResponse.json(rows);
+    // Get total count for pagination
+    const [countResult] = await connection.query(
+      `SELECT COUNT(*) as total FROM reviews r 
+       WHERE r.reply IS NOT NULL AND r.reply != ''`
+    ) as any[];
+    
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching replied feedback:', error);
     return NextResponse.json(
