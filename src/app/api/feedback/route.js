@@ -2,10 +2,13 @@ import db from '@/lib/db';
 
 export async function POST(request) {
   try {
-    const { rating, comment, name = 'Anonymous User', email = 'user@example.com', phone = null, uid = null } = await request.json();
+    const { rating, comment, uid } = await request.json();
     
-    if (!rating || !comment) {
-      return new Response(JSON.stringify({ error: 'Rating and comment are required' }), {
+    if (!rating || !uid) {
+      return new Response(JSON.stringify({ 
+        error: 'Rating and UID are required',
+        received: { rating: !!rating, uid: !!uid }
+      }), {
         status: 400,
         headers: {
           'Content-Type': 'application/json',
@@ -13,36 +16,53 @@ export async function POST(request) {
       });
     }
 
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    
-    // Generate a unique UID for this review if not provided
-    const reviewUid = uid || crypto.randomUUID();
-    
+    // First, check if a record with this UID exists and is pending
+    const [existing] = await db.query(
+      `SELECT id, status, name, email, phone 
+       FROM reviews 
+       WHERE uid = ? AND (status = 'pending' OR status IS NULL)`,
+      [uid]
+    );
+
+    if (!existing || existing.length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'No pending feedback request found with the provided UID. Please make sure you have completed the payment process and have not already submitted feedback.'
+      }), {
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    const userData = existing[0];
+
+    // Update the existing record with the feedback
     const [result] = await db.query(
-      `INSERT INTO reviews 
-      (user_id, owner_id, company_id, rating, review, title, 
-       created_at, updated_at, date, email, name, phone, uid)
-      VALUES (NULL, NULL, NULL, ?, ?, 'Customer Feedback', 
-              ?, ?, ?, ?, ?, ?, ?)`,
+      `UPDATE reviews 
+       SET rating = ?, 
+           review = ?,
+           status = 'replied',
+           updated_at = NOW(),
+           date = NOW()
+       WHERE uid = ?`,
       [
-        rating, 
-        comment,
-        currentDate, // created_at
-        currentDate, // updated_at
-        currentDate, // date
-        email,
-        name,
-        phone,
-        reviewUid
+        rating,
+        comment || null,  // Make sure comment is not undefined
+        uid
       ]
     );
 
+    if (result.affectedRows === 0) {
+      throw new Error('Failed to update feedback');
+    }
+
     return new Response(JSON.stringify({
-      id: result.insertId,
       status: 'success',
-      message: 'Thank you for your feedback!'
+      message: 'Thank you for your feedback!',
+      uid: uid
     }), {
-      status: 201,
+      status: 200,
       headers: {
         'Content-Type': 'application/json',
       },

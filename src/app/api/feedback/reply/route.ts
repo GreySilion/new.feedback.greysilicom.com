@@ -16,10 +16,13 @@ export async function POST(request: Request) {
 
     connection = await pool.getConnection();
 
-    // Update the review with the reply and set updated_at to current timestamp
+    // Update the review with the reply, set status to 'replied', and update timestamps
     const [result] = await connection.query(
       `UPDATE reviews 
-       SET reply = ?, updated_at = NOW() 
+       SET reply = ?, 
+           status = 'replied',
+           replied_at = NOW(),
+           updated_at = NOW() 
        WHERE id = ?`,
       [reply, reviewId]
     );
