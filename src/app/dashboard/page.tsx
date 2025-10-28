@@ -6,7 +6,8 @@ import {
   Smile,
   BarChart3, 
   Settings,
-  TrendingUp
+  TrendingUp,
+  Plus
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -79,10 +80,19 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-bold">Welcome back, {userName}</h1>
             <p className="mt-1 text-blue-100">Here's what's happening with your feedback today.</p>
           </div>
-          <button className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30 md:mt-0">
-            View Reports
-            <ArrowUpRight className="ml-2 h-4 w-4" />
-          </button>
+          <div className="mt-4 flex space-x-3 md:mt-0">
+            <button className="inline-flex items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30">
+              View Reports
+              <ArrowUpRight className="ml-2 h-4 w-4" />
+            </button>
+            <a 
+              href="/dashboard/companies/new"
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
+            >
+              Add Company
+              <Plus className="ml-2 h-4 w-4" />
+            </a>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCompany } from '@/contexts/CompanyContext';
 
@@ -8,11 +8,13 @@ export default function NewCompanyPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string>('');
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [createdCompany, setCreatedCompany] = useState<string>('');
   const router = useRouter();
   const { loadCompanies } = useCompany();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -52,13 +54,21 @@ export default function NewCompanyPage() {
         throw new Error(data.error || 'Failed to create company');
       }
 
-      // Refresh the companies list
-      if (data.userId) {
-        await loadCompanies(data.userId);
+      if (data.success) {
+        // Set success state
+        setIsSuccess(true);
+        setCreatedCompany(name.trim());
+        
+        // Refresh the companies list
+        if (data.userId) {
+          await loadCompanies(data.userId);
+        }
+        
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
       }
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
     } catch (err) {
       console.error('Error creating company:', err);
       setError(err instanceof Error ? err.message : 'Failed to create company');
@@ -77,7 +87,22 @@ export default function NewCompanyPage() {
           </p>
         </div>
 
-        {error && (
+        {isSuccess ? (
+          <div className="mb-4 rounded-md bg-green-50 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">
+                  Success! <span className="font-bold">{createdCompany}</span> has been created successfully. Redirecting...
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : error ? (
           <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -90,7 +115,7 @@ export default function NewCompanyPage() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
