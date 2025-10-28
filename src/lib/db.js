@@ -5,7 +5,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'S3cr3t_3',
-  database: process.env.DB_NAME || 'Grey_silicon_feedback',
+  database: process.env.DB_NAME || 'new_greysilicon_feedback',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
