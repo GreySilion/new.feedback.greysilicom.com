@@ -49,13 +49,13 @@ export async function GET(request) {
       SELECT r.*, c.name as company_name 
       FROM reviews r 
       JOIN companies c ON r.company_id = c.id 
-      WHERE c.user_id = ?
+      WHERE r.owner_id = ?
     `;
     const queryParams = [userId];
 
     // Add company filter if specified
     if (companyId) {
-      query += ' AND c.id = ?';
+      query += ' AND r.company_id = ?';
       queryParams.push(companyId);
     }
 
@@ -64,10 +64,16 @@ export async function GET(request) {
     // Execute the query
     const [reviews] = await connection.query(query, queryParams);
 
+    // Format reviews to ensure replied_at is set
+    const formattedReviews = reviews.map(review => ({
+      ...review,
+      replied_at: review.replied_at || review.updated_at
+    }));
+
     // Format the response with company context
     const response = {
       message: 'Reviews retrieved successfully',
-      data: reviews,
+      data: formattedReviews,
       meta: {
         total: reviews.length,
         companyId: companyId || 'all',

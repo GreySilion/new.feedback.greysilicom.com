@@ -119,7 +119,8 @@ export default function ReviewsPage() {
             ...review,
             reply: replyText,
             status: 'replied' as const,
-            replied_at: new Date().toISOString()
+            replied_at: new Date().toISOString(),
+            updated_at: new Date().toISOString() // Ensure updated_at is set
           };
         }
         return review;

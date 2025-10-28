@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import SimpleFooter from './components/SimpleFooter';
 
 const FeedbackPage = () => {
@@ -10,8 +11,26 @@ const FeedbackPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Get companyId from URL query parameters
+  useEffect(() => {
+    const companyIdParam = searchParams?.get('companyId');
+    if (companyIdParam) {
+      setCompanyId(companyIdParam);
+    } else {
+      setError('Company ID is missing from the URL');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!companyId) {
+      setError('Invalid company reference');
+      return;
+    }
     e.preventDefault();
     
     // Basic validation
@@ -36,7 +55,8 @@ const FeedbackPage = () => {
         },
         body: JSON.stringify({
           rating,
-          comment: comment.trim()
+          comment: comment.trim(),
+          companyId
         }),
       });
       

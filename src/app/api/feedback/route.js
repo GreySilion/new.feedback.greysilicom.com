@@ -20,8 +20,8 @@ export async function POST(request) {
   
   try {
     // Parse the request body
-    const { rating, comment = '' } = await request.json();
-    console.log('Received data:', { rating, comment });
+    const { rating, comment = '', companyId } = await request.json();
+    console.log('Received data:', { rating, comment, companyId });
     
     // Basic validation
     if (!rating) {
@@ -30,26 +30,51 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Company ID is required' },
+        { status: 400 }
+      );
+    }
 
     // Create a new connection
     connection = await mysql.createConnection(dbConfig);
     
-    // Simple insert query with only required fields
-    // Using status = 1 (assuming 1 means 'pending' in your database)
+    // First, get the company details to get the owner_id
+    const [companyResult] = await connection.execute(
+      'SELECT user_id FROM companies WHERE id = ?',
+      [companyId]
+    );
+    
+    if (companyResult.length === 0) {
+      return NextResponse.json(
+        { error: 'Company not found' },
+        { status: 404 }
+      );
+    }
+    
+    const ownerId = companyResult[0].user_id;
+    
+    // Insert query with company and owner information
     const sql = `
       INSERT INTO reviews (
         rating, 
         review,
         status,
         uid,
+        company_id,
+        owner_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, 1, ?, NOW(), NOW())`;
+      ) VALUES (?, ?, 1, ?, ?, ?, NOW(), NOW())`;
     
     const values = [
       rating,
       comment || null, // Store as NULL if empty string
-      uuidv4()
+      uuidv4(),
+      companyId,
+      ownerId
     ];
     
     console.log('Executing query:', sql.replace(/\s+/g, ' ').trim());
