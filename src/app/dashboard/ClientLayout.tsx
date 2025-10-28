@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { CompanyProvider } from '@/contexts/CompanyContext';
 import { CompanySelector } from '@/components/dashboard/CompanySelector';
-import { User } from 'lucide-react';
+import { UserDropdown } from '@/components/dashboard/UserDropdown';
 
 interface ClientLayoutProps {
   user: {
@@ -64,7 +63,7 @@ export function DashboardHeader({ user, children }: DashboardHeaderProps) {
               <CompanySelector userId={user.id} />
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <UserDisplay user={user} size="sm" />
+              <UserDropdown user={user} />
             </div>
           </div>
         </div>
@@ -73,27 +72,3 @@ export function DashboardHeader({ user, children }: DashboardHeaderProps) {
   );
 }
 
-// UserDisplay component (simplified for the example)
-function UserDisplay({ user, size = 'md' }: { user: any; size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClasses = {
-    sm: 'h-8 w-8 text-sm',
-    md: 'h-10 w-10 text-base',
-    lg: 'h-12 w-12 text-lg',
-  };
-  
-  const initial = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U';
-
-  return (
-    <div className="flex items-center">
-      <div className={`${sizeClasses[size]} rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium`}>
-        {initial}
-      </div>
-      <div className="ml-3 hidden md:block">
-        <p className="text-sm font-medium text-gray-700">{user?.name || user?.email || 'User'}</p>
-        {user?.email && user.name && (
-          <p className="text-xs text-gray-500 truncate max-w-[180px]">{user.email}</p>
-        )}
-      </div>
-    </div>
-  );
-}

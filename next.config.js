@@ -38,10 +38,7 @@ const nextConfig = {
     return config;
   },
   
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // ESLint configuration moved to eslint.config.mjs
   
   // TypeScript configuration
   typescript: {
