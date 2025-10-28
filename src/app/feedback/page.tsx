@@ -4,17 +4,17 @@ import { useState } from 'react';
 import SimpleFooter from './components/SimpleFooter';
 
 const FeedbackPage = () => {
-  const [rating, setRating] = useState(0);
+    const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [hover, setHover] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Basic validation
     if (rating === 0) {
       setError('Please select a rating');
       return;
@@ -91,40 +91,41 @@ const FeedbackPage = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rate your experience
-                </label>
-                <div className="flex justify-center space-x-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      className={`text-3xl ${star <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHover(star)}
-                      onMouseLeave={() => setHover(rating)}
-                      aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
-                    >
-                      ★
-                    </button>
-                  ))}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                    How would you rate your experience?
+                  </label>
+                  <div className="flex justify-center space-x-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={`text-4xl ${star <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHover(star)}
+                        onMouseLeave={() => setHover(rating)}
+                        aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
-                  Share more about your experience
-                </label>
-                <textarea
-                  id="comment"
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="Your feedback helps us improve..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  required
-                />
+                <div>
+                  <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
+                    Your Feedback (optional)
+                  </label>
+                  <textarea
+                    id="comment"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Share your thoughts with us..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                  />
+                </div>
               </div>
 
               {error && (

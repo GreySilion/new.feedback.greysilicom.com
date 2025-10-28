@@ -1,33 +1,105 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import mysql from 'mysql2/promise';
+import { v4 as uuidv4 } from 'uuid';
+
+// Database configuration
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'S3cr3t_3',
+  database: process.env.DB_NAME || 'Grey_silicon_feedback_dump',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
 
 // POST /api/feedback - Submit new feedback
 export async function POST(request) {
+  console.log('Received feedback submission request');
+  let connection;
+  
   try {
-    const { name, email, subject, message, company_id, rating } = await request.json();
-
-    if (!name || !email || !message || !company_id) {
+    // Parse the request body
+    const { rating, comment = '' } = await request.json();
+    console.log('Received data:', { rating, comment });
+    
+    // Basic validation
+    if (!rating) {
       return NextResponse.json(
-        { error: 'Name, email, message, and company_id are required' },
+        { error: 'Rating is required' },
         { status: 400 }
       );
     }
 
-    const [result] = await pool.query(
-      'INSERT INTO feedback (name, email, subject, message, company_id, rating, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
-      [name, email, subject || '', message, company_id, rating || null, 'pending']
-    );
-
+    // Create a new connection
+    connection = await mysql.createConnection(dbConfig);
+    
+    // Simple insert query with only required fields
+    // Using status = 1 (assuming 1 means 'pending' in your database)
+    const sql = `
+      INSERT INTO reviews (
+        rating, 
+        review,
+        status,
+        uid,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, 1, ?, NOW(), NOW())`;
+    
+    const values = [
+      rating,
+      comment || null, // Store as NULL if empty string
+      uuidv4()
+    ];
+    
+    console.log('Executing query:', sql.replace(/\s+/g, ' ').trim());
+    console.log('With values:', values);
+    
+    // Execute the query
+    const [result] = await connection.execute(sql, values);
+    console.log('Insert successful, ID:', result.insertId);
+    
     return NextResponse.json(
-      { message: 'Feedback submitted successfully', id: result.insertId },
+      { 
+        success: true,
+        message: 'Feedback submitted successfully',
+        id: result.insertId
+      },
       { status: 201 }
     );
+    
   } catch (error) {
-    console.error('Error submitting feedback:', error);
+    console.error('Error in /api/feedback:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sql: error.sql
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to submit feedback', details: error.message },
+      { 
+        success: false,
+        error: 'Failed to submit feedback',
+        message: error.message,
+        ...(process.env.NODE_ENV === 'development' && {
+          details: {
+            code: error.code,
+            sqlState: error.sqlState
+          }
+        })
+      },
       { status: 500 }
     );
+    
+  } finally {
+    // Close the connection
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (e) {
+        console.error('Error closing connection:', e);
+      }
+    }
   }
 }
 
