@@ -1,226 +1,194 @@
-import { 
-  ArrowUpRight, 
-  MessageSquare, 
-  Star, 
-  Calendar, 
-  Smile,
-  BarChart3, 
-  Settings,
-  TrendingUp,
-  Plus
-} from 'lucide-react';
-import { getCurrentUser } from '@/lib/auth';
+'use client';
 
-async function getDashboardStats() {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/dashboard/stats`, {
-      next: { revalidate: 60 } // Revalidate every 60 seconds
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch dashboard stats');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return null;
-  }
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getCurrentUser } from '@/app/actions/auth';
+import { Clock, CheckCircle, MessageSquare, Star, BarChart3 } from 'lucide-react';
+
+interface Company {
+  id: string;
+  name: string;
+  status: string;
+  created_at: string;
 }
 
-export default async function DashboardPage() {
-  const [currentUser, statsData] = await Promise.all([
-    getCurrentUser(),
-    getDashboardStats()
-  ]);
-  
-  const userName = currentUser?.name || 'User';
+interface DashboardStats {
+  averageRating: string;
+  totalFeedback: number;
+  pendingReplies: number;
+  repliedFeedback: number;
+}
 
-  const stats = [
-    {
-      title: 'Average Rating',
-      value: statsData?.averageRating || '0.0',
-      change: 'N/A',
-      icon: <Star className="h-6 w-6 text-amber-400" />,
-      color: 'bg-amber-100',
-      textColor: 'text-amber-700',
-    },
-    {
-      title: 'Total Feedback',
-      value: statsData?.totalFeedback?.toLocaleString() || '0',
-      change: 'N/A',
-      icon: <MessageSquare className="h-6 w-6 text-blue-500" />,
-      color: 'bg-blue-100',
-      textColor: 'text-blue-700',
-    },
-    {
-      title: 'Feedback This Month',
-      value: statsData?.feedbackThisMonth?.toLocaleString() || '0',
-      change: 'N/A',
-      icon: <Calendar className="h-6 w-6 text-emerald-500" />,
-      color: 'bg-emerald-100',
-      textColor: 'text-emerald-700',
-    },
-    {
-      title: 'Most Common Rating',
-      value: statsData?.mostCommonRating ? `${statsData.mostCommonRating}★` : 'N/A',
-      change: 'N/A',
-      icon: <BarChart3 className="h-6 w-6 text-green-500" />,
-      color: 'bg-green-100',
-      textColor: 'text-green-700',
-    },
-  ];
+export default function DashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [user, setUser] = useState<any>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [stats, setStats] = useState<DashboardStats>({
+    averageRating: '0.0',
+    totalFeedback: 0,
+    pendingReplies: 0,
+    repliedFeedback: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Get current user on component mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+          router.push('/login');
+          return;
+        }
+        setUser(currentUser);
+        // Ensure the ID is treated as a string
+        const userId = String(currentUser.id);
+        await fetchCompanies(userId);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        router.push('/login');
+      }
+    };
+
+    fetchUser();
+  }, [router]);
+
+  // Fetch companies for the current user
+  const fetchCompanies = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/companies?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch companies');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setCompanies(data.data);
+        // Set the selected company from URL params or default to the first company
+        const companyId = searchParams.get('companyId') || (data.data[0]?.id || '');
+        setSelectedCompanyId(companyId);
+        if (companyId) {
+          await fetchDashboardStats(companyId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch dashboard stats for the selected company
+  const fetchDashboardStats = async (companyId: string) => {
+    if (!companyId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/dashboard/stats?companyId=${companyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle company selection change
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCompanyId = e.target.value;
+    setSelectedCompanyId(newCompanyId);
+    
+    // Update URL with the selected company ID
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('companyId', newCompanyId);
+    router.push(`?${params.toString()}`, { scroll: false });
+    
+    // Fetch stats for the selected company
+    fetchDashboardStats(newCompanyId);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Welcome back, {userName}</h1>
-            <p className="mt-1 text-blue-100">Here's what's happening with your feedback today.</p>
-          </div>
-          <div className="mt-4 flex space-x-3 md:mt-0">
-            <button className="inline-flex items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30">
-              View Reports
-              <ArrowUpRight className="ml-2 h-4 w-4" />
-            </button>
-            <a 
-              href="/dashboard/companies/new"
-              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        {companies.length > 0 && (
+          <div className="relative">
+            <select
+              value={selectedCompanyId}
+              onChange={handleCompanyChange}
+              className="appearance-none bg-white border border-gray-300 rounded-md py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
             >
-              Add Company
-              <Plus className="ml-2 h-4 w-4" />
-            </a>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <div 
-            key={index}
-            className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md"
-          >
-            <div className="absolute right-4 top-4 opacity-10">
-              <div className={`h-12 w-12 rounded-full ${stat.color}`}></div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.title}</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">{stat.value}</p>
-                <div className="mt-2 flex items-center">
-                  <TrendingUp className={`h-4 w-4 ${stat.textColor}`} />
-                  <span className={`ml-1 text-sm font-medium ${stat.textColor}`}>
-                    {stat.change} this month
-                  </span>
-                </div>
-              </div>
-              <div className={`flex h-12 w-12 items-center justify-center rounded-full ${stat.color} ${stat.textColor} transition-transform group-hover:scale-110`}>
-                {stat.icon}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Activity & Quick Actions */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Feedback */}
-        <div className="rounded-xl bg-white p-6 shadow-sm lg:col-span-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Feedback</h3>
-            <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
-              View All
-            </button>
-          </div>
-          
-          <div className="mt-6 space-y-6">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="group flex items-start space-x-4 rounded-lg p-3 transition-colors hover:bg-gray-50">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-gray-900">New feedback received</h4>
-                    <span className="text-xs text-gray-500">2h ago</span>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {item === 1 && 'Great product! The interface is very intuitive and easy to use.'}
-                    {item === 2 && 'Had some issues with the checkout process. It was a bit confusing.'}
-                    {item === 3 && 'Loving the new features! Keep up the good work.'}
-                  </p>
-                  <div className="mt-2 flex items-center">
-                    <div className="flex -space-x-2">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-600 border-2 border-white">
-                          {i}
-                        </div>
-                      ))}
-                    </div>
-                    <span className="ml-2 text-xs text-gray-500">+2 more</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div>
+              <p className="text-sm font-medium text-gray-500">Average Rating</p>
+              <p className="text-2xl font-semibold">{stats.averageRating}</p>
+            </div>
+            <div className="p-3 rounded-full bg-amber-100 text-amber-600">
+              <Star className="h-6 w-6" />
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="space-y-6">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-            <div className="mt-4 space-y-3">
-              <button className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-4 text-left transition-colors hover:bg-gray-50">
-                <div className="flex items-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                    <MessageSquare className="h-5 w-5" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">New Feedback Form</p>
-                    <p className="text-xs text-gray-500">Create a new feedback form</p>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-5 w-5 text-gray-400" />
-              </button>
-              
-              <button className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-4 text-left transition-colors hover:bg-gray-50">
-                <div className="flex items-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-                    <BarChart3 className="h-5 w-5" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Generate Report</p>
-                    <p className="text-xs text-gray-500">Create a custom report</p>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-5 w-5 text-gray-400" />
-              </button>
-              
-              <button className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-4 text-left transition-colors hover:bg-gray-50">
-                <div className="flex items-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
-                    <Settings className="h-5 w-5" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">Settings</p>
-                    <p className="text-xs text-gray-500">Configure your dashboard</p>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-5 w-5 text-gray-400" />
-              </button>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Total Feedback</p>
+              <p className="text-2xl font-semibold">{stats.totalFeedback?.toLocaleString()}</p>
+            </div>
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              <MessageSquare className="h-6 w-6" />
             </div>
           </div>
+        </div>
 
-          <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 p-6 text-white shadow-lg">
-            <h3 className="text-lg font-semibold">Need help?</h3>
-            <p className="mt-1 text-sm text-indigo-100">Our support team is here to help you with any questions.</p>
-            <button className="mt-4 inline-flex items-center rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30">
-              Contact Support
-              <ArrowUpRight className="ml-2 h-4 w-4" />
-            </button>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Pending Replies</p>
+              <p className="text-2xl font-semibold">{stats.pendingReplies?.toLocaleString()}</p>
+            </div>
+            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+              <Clock className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Replied</p>
+              <p className="text-2xl font-semibold">{stats.repliedFeedback?.toLocaleString()}</p>
+            </div>
+            <div className="p-3 rounded-full bg-green-100 text-green-600">
+              <CheckCircle className="h-6 w-6" />
+            </div>
           </div>
         </div>
       </div>

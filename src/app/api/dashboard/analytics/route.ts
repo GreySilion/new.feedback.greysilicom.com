@@ -9,7 +9,17 @@ interface AnalyticsData {
   ratingsTrend: Array<{ date: string; averageRating: number }>;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const companyId = searchParams.get('companyId');
+
+  if (!companyId) {
+    return NextResponse.json(
+      { success: false, error: 'Company ID is required' },
+      { status: 400 }
+    );
+  }
+
   let connection;
   try {
     connection = await pool.getConnection();
@@ -19,13 +29,15 @@ export async function GET() {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
 
-    // Fetch all required analytics data
+    // Fetch all required analytics data with company filter
     const [totalFeedbackResult] = await connection.query<mysql.RowDataPacket[]>(
-      'SELECT COUNT(*) as count FROM reviews'
+      'SELECT COUNT(*) as count FROM reviews WHERE company_id = ?',
+      [companyId]
     );
 
     const [averageRatingResult] = await connection.query<mysql.RowDataPacket[]>(
-      'SELECT COALESCE(AVG(COALESCE(rating, 0)), 0) as average FROM reviews'
+      'SELECT COALESCE(AVG(COALESCE(rating, 0)), 0) as average FROM reviews WHERE company_id = ?',
+      [companyId]
     );
 
     const [feedbackByRating] = await connection.query<mysql.RowDataPacket[]>(
@@ -33,9 +45,10 @@ export async function GET() {
         rating, 
         COUNT(*) as count 
       FROM reviews 
-      WHERE rating IS NOT NULL 
+      WHERE company_id = ? AND rating IS NOT NULL 
       GROUP BY rating 
-      ORDER BY rating`
+      ORDER BY rating`,
+      [companyId]
     );
 
     // Get ratings trend for the last 30 days
@@ -44,10 +57,10 @@ export async function GET() {
         DATE(created_at) as date,
         COALESCE(AVG(rating), 0) as averageRating
       FROM reviews
-      WHERE created_at >= ?
+      WHERE company_id = ? AND created_at >= ?
       GROUP BY DATE(created_at)
       ORDER BY date`,
-      [startDate]
+      [companyId, startDate]
     );
 
     // Format the response
