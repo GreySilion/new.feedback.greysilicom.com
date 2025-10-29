@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock, CheckCircle, MessageSquare, Star, BarChart3 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the DashboardCharts component with SSR disabled
+const DashboardCharts = dynamic(
+  () => import('@/components/dashboard/DashboardCharts'),
+  { ssr: false }
+);
 
 // Mock session data for testing
 const MOCK_SESSION = {
@@ -324,6 +331,11 @@ export default function DashboardPage() {
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Responses sent</p>
         </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="mt-8">
+        <DashboardCharts stats={stats} />
       </div>
     </div>
   );
