@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { CompanyProvider } from '@/contexts/CompanyContext';
-import { CompanySelector } from '@/components/dashboard/CompanySelector';
 import { UserDropdown } from '@/components/dashboard/UserDropdown';
 
 interface ClientLayoutProps {
@@ -58,13 +57,8 @@ export function DashboardHeader({ user, children }: DashboardHeaderProps) {
           <div className="flex items-center space-x-4">
             {children}
           </div>
-          <div className="flex items-center space-x-6">
-            <div className="hidden md:block">
-              <CompanySelector userId={user.id} />
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-              <UserDropdown user={user} />
-            </div>
+          <div className="flex items-center">
+            <UserDropdown user={user} />
           </div>
         </div>
       </div>

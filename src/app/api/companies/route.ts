@@ -6,7 +6,7 @@ import type { ResultSetHeader } from 'mysql2/promise';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
-
+  
   if (!userId) {
     return NextResponse.json(
       { success: false, error: 'User ID is required' },
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, status, created_at FROM companies WHERE user_id = ? ORDER BY name ASC',
+      'SELECT id, name, status, created_at FROM companies WHERE owner_id = ? ORDER BY name ASC',
       [userId]
     );
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
       // Insert new company
       const [result] = await connection.execute<ResultSetHeader>(
-        'INSERT INTO companies (user_id, name, description, status, created_at, updated_at) VALUES (?, ?, ?, 1, NOW(), NOW())',
+        'INSERT INTO companies (owner_id, name, description, status, created_at, updated_at) VALUES (?, ?, ?, 1, NOW(), NOW())',
         [user.id, name.trim(), description?.trim() || null]
       );
 

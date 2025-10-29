@@ -13,6 +13,7 @@ interface SidebarProps {
 
 export function Sidebar({ user }: SidebarProps) {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isCompaniesOpen, setIsCompaniesOpen] = useState(false);
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -86,60 +87,7 @@ export function Sidebar({ user }: SidebarProps) {
             Dashboard
           </a>
 
-          {/* Feedback Dropdown */}
-          <div className="space-y-1">
-            <button 
-              id="feedback-dropdown-button"
-              className="group flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-              onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
-              aria-expanded={isFeedbackOpen}
-              aria-controls="feedback-dropdown"
-            >
-              <div className="flex items-center">
-                <svg 
-                  className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                <span>Feedback</span>
-              </div>
-              <svg 
-                id="feedback-dropdown-icon"
-                className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isFeedbackOpen ? 'rotate-180' : ''}`}
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            <div 
-              id="feedback-dropdown" 
-              className={`ml-8 space-y-1 transition-all duration-200 overflow-hidden ${isFeedbackOpen ? 'max-h-32 mt-2' : 'max-h-0 mt-0'}`}
-            >
-              <a
-                href="/dashboard/feedback/pending"
-                className="group flex items-center rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
-              >
-                <span className="mr-2 h-1.5 w-1.5 rounded-full bg-yellow-400"></span>
-                Pending Replies
-              </a>
-              <a
-                href="/dashboard/feedback/replied"
-                className="group flex items-center rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
-              >
-                <span className="mr-2 h-1.5 w-1.5 rounded-full bg-green-400"></span>
-                Replied
-              </a>
-            </div>
-          </div>
-
-          {/* Reviews Link */}
+{/* Reviews Link */}
           <a
             href="/dashboard/reviews"
             className="group flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
@@ -154,6 +102,51 @@ export function Sidebar({ user }: SidebarProps) {
             </svg>
             <span>Reviews</span>
           </a>
+
+          {/* Companies Dropdown */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setIsCompaniesOpen(!isCompaniesOpen)}
+              className="group flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            >
+              <div className="flex items-center">
+                <svg 
+                  className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span>Companies</span>
+              </div>
+              <svg
+                className={`h-4 w-4 transition-transform ${isCompaniesOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {isCompaniesOpen && (
+              <div className="ml-8 space-y-1">
+                <a
+                  href="/dashboard/companies"
+                  className="block rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  All Companies
+                </a>
+                <a
+                  href="/dashboard/companies/new"
+                  className="block rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  New Company
+                </a>
+              </div>
+            )}
+          </div>
 
           {/* Other Navigation Items */}
           {[

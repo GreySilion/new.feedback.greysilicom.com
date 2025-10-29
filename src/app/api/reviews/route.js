@@ -19,7 +19,7 @@ export async function GET(request) {
   try {
     // First, get the user's companies to verify access
     const [userCompanies] = await connection.query(
-      'SELECT id, name FROM companies WHERE user_id = ?',
+      'SELECT id, name FROM companies WHERE owner_id = ?',
       [userId]
     );
 

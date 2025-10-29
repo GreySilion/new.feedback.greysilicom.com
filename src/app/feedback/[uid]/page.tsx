@@ -16,6 +16,7 @@ export default function FeedbackPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [userName, setUserName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [ratingError, setRatingError] = useState('');
   
   const router = useRouter();
   const params = useParams<FeedbackParams>();
@@ -38,11 +39,15 @@ export default function FeedbackPage() {
         }
         
         const data = await response.json();
-        setUserName(data.name);
+        setUserName(data.name || 'Valued Customer');
         
-        // If already submitted, show message
-        if (data.submitted) {
-          setIsSubmitted(true);
+        // If already has a rating, pre-fill the form
+        if (data.rating) {
+          setRating(parseInt(data.rating));
+          setComment(data.review || '');
+          if (data.review) {
+            setIsSubmitted(true);
+          }
         }
         
       } catch (err) {
@@ -56,44 +61,70 @@ export default function FeedbackPage() {
     fetchUserDetails();
   }, [uid]);
 
+  // Handle rating change
+  const handleRatingChange = (star: number) => {
+    setRating(star);
+    // Clear rating error when user selects a rating
+    if (star > 0 && ratingError) {
+      setRatingError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate rating
     if (rating === 0) {
-      setError('Please select a rating');
-      return;
-    }
-    
-    if (!comment.trim()) {
-      setError('Please provide your feedback');
+      setRatingError('Please select a star rating before submitting your review.');
+      // Scroll to the rating section for better UX
+      document.getElementById('rating-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     
     setIsSubmitting(true);
     setError('');
+    setRatingError(''); // Clear any previous rating error
     
     try {
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
+      console.log('Submitting feedback for UID:', uid);
+      console.log('Payload:', { rating, review: comment.trim() || null });
+      
+      const response = await fetch(`/api/feedback/${uid}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uid,
           rating,
-          comment: comment.trim()
+          review: comment.trim() || null
         }),
       });
+
+      console.log('Response status:', response.status);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit feedback');
+      // Get the response text first
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      let responseData;
+      try {
+        // Try to parse the response as JSON
+        responseData = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('Invalid response format from server');
       }
       
+      if (!response.ok) {
+        console.error('Server error:', responseData);
+        throw new Error(responseData.error || `Server responded with status ${response.status}`);
+      }
+      
+      console.log('Feedback submitted successfully:', responseData);
       setIsSubmitted(true);
       
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error in handleSubmit:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit feedback');
     } finally {
       setIsSubmitting(false);
@@ -165,19 +196,41 @@ export default function FeedbackPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 How would you rate your experience?
               </label>
-              <div className="flex justify-center space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    className={`text-3xl ${star <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHover(star)}
-                    onMouseLeave={() => setHover(rating)}
-                  >
-                    ★
-                  </button>
-                ))}
+              <div id="rating-section" className="flex flex-col items-center">
+                <div className="flex justify-center space-x-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`text-3xl transition-transform duration-100 hover:scale-110 ${
+                        star <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'
+                      }`}
+                      onClick={() => handleRatingChange(star)}
+                      onMouseEnter={() => setHover(star)}
+                      onMouseLeave={() => setHover(rating)}
+                      aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                {ratingError && (
+                  <p className="mt-2 text-sm text-red-500 flex items-center">
+                    <svg
+                      className="w-4 h-4 mr-1"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {ratingError}
+                  </p>
+                )}
               </div>
               <p className="mt-1 text-xs text-gray-500">
                 {rating === 0 ? 'Select a rating' : 

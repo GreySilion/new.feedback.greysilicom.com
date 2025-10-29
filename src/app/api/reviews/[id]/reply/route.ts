@@ -30,7 +30,7 @@ export async function POST(
       const [reviews] = await connection.query<Review[]>(
         `SELECT r.* FROM reviews r
          JOIN companies c ON r.company_id = c.id
-         WHERE r.id = ? AND c.user_id = ?`,
+         WHERE r.id = ? AND c.owner_id = ?`,
         [id, userId]
       );
 

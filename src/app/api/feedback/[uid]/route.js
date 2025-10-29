@@ -17,10 +17,8 @@ async function getConnection() {
   return await mysql.createConnection(dbConfig);
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: { uid: string } }
-) {
+// GET /api/feedback/[uid] - Get feedback by UID
+export async function GET(request, { params }) {
   const { uid } = params;
   let connection;
 
@@ -37,9 +35,9 @@ export async function GET(
     const [rows] = await connection.execute(
       'SELECT * FROM reviews WHERE uid = ?',
       [uid]
-    ) as any[];
+    );
 
-    if (!rows || rows.length === 0) {
+    if (rows.length === 0) {
       return NextResponse.json(
         { error: 'Feedback not found' },
         { status: 404 }
@@ -54,7 +52,7 @@ export async function GET(
     return NextResponse.json(
       { 
         error: 'Failed to fetch feedback',
-        ...(process.env.NODE_ENV === 'development' && { details: (error as Error).message })
+        ...(process.env.NODE_ENV === 'development' && { details: error.message })
       },
       { status: 500 }
     );
@@ -63,10 +61,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { uid: string } }
-) {
+// PATCH /api/feedback/[uid] - Update feedback by UID
+export async function PATCH(request, { params }) {
   const { uid } = params;
   let connection;
   console.log('PATCH request received for UID:', uid);
@@ -106,33 +102,26 @@ export async function PATCH(
     connection = await getConnection();
     
     try {
-      // Check if the record exists
-      const [existing] = await connection.execute(
-        'SELECT id FROM reviews WHERE uid = ?',
-        [uid]
-      ) as any[];
+      // Update the record directly (the WHERE clause will handle non-existent UIDs)
+      const [result] = await connection.execute(
+        'UPDATE reviews SET rating = ?, review = ?, updated_at = NOW() WHERE uid = ?',
+        [rating, review || null, uid]
+      );
 
-      if (!existing || existing.length === 0) {
-        console.error('No record found for UID:', uid);
+      // Check if the update was successful
+      if (result.affectedRows === 0) {
         return NextResponse.json(
-          { error: 'Feedback record not found' },
+          { error: 'Feedback record not found with the provided UID' },
           { status: 404 }
         );
       }
-
-      // Update the record
-      await connection.execute(
-        'UPDATE reviews SET rating = ?, review = ?, status = "replied", updated_at = NOW() WHERE uid = ?',
-        [rating, review || null, uid]
-      );
 
       // Get the updated record
       const [updatedRows] = await connection.execute(
         'SELECT * FROM reviews WHERE uid = ?',
         [uid]
-      ) as any[];
+      );
 
-      console.log('Successfully updated feedback for UID:', uid);
       return NextResponse.json({
         success: true,
         message: 'Feedback updated successfully',
@@ -144,7 +133,7 @@ export async function PATCH(
       return NextResponse.json(
         { 
           error: 'Database error',
-          ...(process.env.NODE_ENV === 'development' && { details: (dbError as Error).message })
+          ...(process.env.NODE_ENV === 'development' && { details: dbError.message })
         },
         { status: 500 }
       );
@@ -155,7 +144,7 @@ export async function PATCH(
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { details: (error as Error).message })
+        ...(process.env.NODE_ENV === 'development' && { details: error.message })
       },
       { status: 500 }
     );
