@@ -1,21 +1,58 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { UserDisplay } from './UserDisplay';
+import { useCompany } from '@/contexts/CompanyContext';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { 
+  Home, 
+  MessageSquare, 
+  BarChart, 
+  Settings, 
+  Users, 
+  LogOut, 
+  ChevronDown, 
+  ChevronRight, 
+  Building2,
+  Plus,
+  Menu
+} from 'lucide-react';
 
-interface SidebarProps {
-  user: {
-    name: string;
-    email: string;
-  } | null;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  username?: string;
 }
 
-export function Sidebar({ user }: SidebarProps) {
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [isCompaniesOpen, setIsCompaniesOpen] = useState(false);
+interface Company {
+  id: string;
+  name: string;
+  status?: string;
+  created_at?: string;
+}
+
+interface SidebarProps {
+  user: User | null;
+  companyId?: string;
+}
+
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Reviews', href: '/dashboard/reviews', icon: MessageSquare },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart },
+  { name: 'Team', href: '/dashboard/team', icon: Users },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+];
+
+export function Sidebar({ user, companyId }: SidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { companies, selectedCompany } = useCompany();
+  const [isCompaniesOpen, setIsCompaniesOpen] = useState(false);
 
   // Toggle sidebar state
   const toggleSidebar = () => {
@@ -23,17 +60,24 @@ export function Sidebar({ user }: SidebarProps) {
     document.body.classList.toggle('sidebar-open', !isOpen);
   };
 
-  // Close feedback dropdown when navigating away
+  // Close sidebar when navigating on mobile
   useEffect(() => {
-    setIsFeedbackOpen(false);
+    if (isOpen) {
+      setIsOpen(false);
+      document.body.classList.remove('sidebar-open');
+    }
   }, [pathname]);
 
-  // Close dropdown when clicking outside
+  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (isFeedbackOpen && !target.closest('#feedback-dropdown') && !target.closest('#feedback-dropdown-button')) {
-        setIsFeedbackOpen(false);
+      const sidebar = document.getElementById('sidebar');
+      const toggleButton = document.getElementById('sidebar-toggle');
+      
+      if (isOpen && sidebar && !sidebar.contains(target) && toggleButton && !toggleButton.contains(target)) {
+        setIsOpen(false);
+        document.body.classList.remove('sidebar-open');
       }
     };
 
@@ -41,149 +85,166 @@ export function Sidebar({ user }: SidebarProps) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isFeedbackOpen]);
+  }, [isOpen]);
+
+  const handleCompanySelect = (companyId: string) => {
+    router.push(`/dashboard?companyId=${companyId}`);
+  };
+
+  const handleLogout = async () => {
+    // Clear any company selection
+    localStorage.removeItem('selectedCompanyId');
+    // Redirect to login
+    router.push('/login');
+  };
 
   return (
     <>
+      {/* Mobile backdrop */}
       <div 
         id="sidebar-backdrop" 
-        className="lg:hidden fixed inset-0 z-20 bg-black/50 hidden"
-        onClick={toggleSidebar}
+        className={cn(
+          'fixed inset-0 z-20 bg-black/50 transition-opacity duration-300 lg:hidden',
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={() => {
+          setIsOpen(false);
+          document.body.classList.remove('sidebar-open');
+        }}
       />
-      <aside 
-        id="sidebar" 
-        className={`fixed left-0 top-0 z-30 h-screen w-64 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:translate-x-0`}
-        aria-label="Sidebar"
+      
+      {/* Sidebar */}
+      <aside
+        id="sidebar"
+        className={cn(
+          'fixed top-0 left-0 z-30 w-64 h-screen bg-white border-r border-gray-200 transition-transform duration-300',
+          'lg:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
       >
-      <div className="flex h-full flex-col overflow-y-auto px-4 py-6">
-        <div className="mb-8 flex items-center justify-between px-2">
-          <span className="text-xl font-semibold text-gray-800">FeedbackPro</span>
-            <button 
-              type="button" 
-              className="lg:hidden text-gray-500 hover:text-gray-600"
-              onClick={toggleSidebar}
-              aria-label="Close sidebar"
+        <div className="flex flex-col h-full overflow-y-auto">
+          {/* Logo */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+            <div className="flex items-center">
+              <span className="text-xl font-bold text-blue-600">Feedback</span>
+            </div>
+            <button
+              type="button"
+              className="p-1 rounded-md text-gray-500 hover:text-gray-600 lg:hidden"
+              onClick={() => {
+                setIsOpen(false);
+                document.body.classList.remove('sidebar-open');
+              }}
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="sr-only">Close sidebar</span>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-        </div>
-        
-        <nav className="space-y-1">
-          {/* Dashboard Link */}
-          <a
-            href="/dashboard"
-            className="group flex items-center rounded-lg px-4 py-3 text-sm font-medium text-blue-600 bg-blue-50"
-          >
-            <svg 
-              className="mr-3 h-5 w-5 text-blue-600" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Dashboard
-          </a>
+          </div>
 
-{/* Reviews Link */}
-          <a
-            href="/dashboard/reviews"
-            className="group flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-          >
-            <svg 
-              className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
-            <span>Reviews</span>
-          </a>
-
-          {/* Companies Dropdown */}
-          <div className="space-y-1">
+          {/* Company Selector */}
+          <div className="px-4 py-4 border-b border-gray-200">
             <button
               onClick={() => setIsCompaniesOpen(!isCompaniesOpen)}
-              className="group flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+              className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-left text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <div className="flex items-center">
-                <svg 
-                  className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <span>Companies</span>
+                <Building2 className="w-4 h-4 mr-2 text-gray-500" />
+                <span className="truncate">
+                  {selectedCompany && 'name' in selectedCompany ? selectedCompany.name : 'Select Company'}
+                </span>
               </div>
-              <svg
-                className={`h-4 w-4 transition-transform ${isCompaniesOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              {isCompaniesOpen ? (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              )}
             </button>
-            
-            {isCompaniesOpen && (
-              <div className="ml-8 space-y-1">
-                <a
-                  href="/dashboard/companies"
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+
+            {/* Company Dropdown */}
+            {isCompaniesOpen && companies.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {companies.map((company) => (
+                  <button
+                    key={company.id}
+                    onClick={() => handleCompanySelect(company.id.toString())}
+                    className={cn(
+                      'flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100',
+                      selectedCompany && 'id' in selectedCompany && 
+                      selectedCompany.id === company.id && 'bg-blue-50 text-blue-600'
+                    )}
+                  >
+                    <span className="truncate">{company.name}</span>
+                  </button>
+                ))}
+                <Link
+                  href="/companies"
+                  className="flex items-center px-3 py-2 text-sm text-blue-600 rounded-md hover:bg-blue-50"
                 >
-                  All Companies
-                </a>
-                <a
-                  href="/dashboard/companies/new"
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  New Company
-                </a>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Company
+                </Link>
               </div>
             )}
           </div>
 
-          {/* Other Navigation Items */}
-          {[
-            { name: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3' },
-            { name: 'Settings', href: '/dashboard/settings', icon: 'Settings' },
-          ].map((item) => (
-            <a
-              key={item.name}
-              href={item.href}
-              className="group flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-            >
-              <svg 
-                className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                {item.icon === 'BarChart3' && (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                )}
-                {item.icon === 'Settings' && (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                )}
-              </svg>
-              {item.name}
-            </a>
-          ))}
-        </nav>
+          {/* Navigation */}
+          <nav className="flex-1 px-2 py-4 space-y-1">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={companyId ? `${item.href}?companyId=${companyId}` : item.href}
+                  className={cn(
+                    'flex items-center px-3 py-2 text-sm font-medium rounded-md',
+                    isActive
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'mr-3 h-5 w-5 flex-shrink-0',
+                      isActive ? 'text-blue-500' : 'text-gray-400'
+                    )}
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* User profile */}
-        <div className="mt-auto pt-6">
-          <div className="flex items-center rounded-lg bg-gray-50 p-3">
-            <UserDisplay user={user} size="md" />
+          {/* User section */}
+          <div className="p-4 mt-auto border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              {user && <UserDisplay user={user} />}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-500 rounded-full hover:bg-gray-100"
+                title="Sign out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </aside>
+
+      {/* Mobile menu button */}
+      <button
+        id="sidebar-toggle"
+        type="button"
+        className="fixed bottom-4 right-4 z-20 p-3 text-white bg-blue-600 rounded-full shadow-lg lg:hidden"
+        onClick={toggleSidebar}
+      >
+        <span className="sr-only">Open sidebar</span>
+        <Menu className="w-6 h-6" />
+      </button>
     </>
   );
 }

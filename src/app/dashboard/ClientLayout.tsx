@@ -1,45 +1,80 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { CompanyProvider } from '@/contexts/CompanyContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Company } from '@prisma/client';
+import { useCompany } from '@/contexts/CompanyContext';
 import { UserDropdown } from '@/components/dashboard/UserDropdown';
+import { Button } from '@/components/ui/button';
+import { Building2, ChevronDown } from 'lucide-react';
 
 interface ClientLayoutProps {
   user: {
     id: string;
     name?: string | null;
     email?: string | null;
-    // Add other user properties as needed
   };
+  company: Company;
   children: React.ReactNode;
 }
 
-export default function ClientLayout({ user, children }: ClientLayoutProps) {
+export default function ClientLayout({ user, company, children }: ClientLayoutProps) {
+  const router = useRouter();
   const [isClient, setIsClient] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-
+  const { companies, selectCompany } = useCompany();
+  
   // Set isClient to true after mounting to ensure we're on the client side
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load selected company from localStorage on the client side
+  // Update company selection when company prop changes
   useEffect(() => {
-    if (isClient) {
-      const savedCompanyId = localStorage.getItem('selectedCompanyId');
-      setSelectedCompanyId(savedCompanyId);
+    if (company?.id) {
+      selectCompany(company.id.toString());
     }
-  }, [isClient]);
+  }, [company?.id, selectCompany]);
 
-  return (
-    <CompanyProvider initialCompanyId={isClient ? selectedCompanyId : null}>
+  const handleCompanyChange = useCallback((companyId: string) => {
+    // Update the URL with the new company ID
+    router.push(`/dashboard?companyId=${companyId}`);
+    // The middleware will handle the cookie and redirection
+  }, [router]);
+
+  if (!isClient) {
+    return (
       <div className="flex-1 flex flex-col overflow-hidden">
         {children}
       </div>
-    </CompanyProvider>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="relative">
+        {/* Company Switcher in Header */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="flex items-center space-x-2 bg-white rounded-full shadow-md px-4 py-1.5">
+            <Building2 className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-sm">{company?.name || 'Select Company'}</span>
+            {companies.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => router.push('/companies?from=dashboard')}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
   );
 }
 
-// This component is used to wrap the header and pass the user ID to CompanySelector
+// This component is used to wrap the header and pass the user ID to UserDropdown
 interface DashboardHeaderProps {
   user: {
     id: string;

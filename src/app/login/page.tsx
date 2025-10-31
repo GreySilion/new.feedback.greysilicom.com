@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -39,37 +40,20 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      // Use NextAuth's signIn function
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+        callbackUrl: '/companies'
       });
-
-      // Check if the response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Non-JSON response:', text);
-        throw new Error('Server returned an invalid response. Please try again.');
+      
+      if (result?.error) {
+        throw new Error(result.error);
       }
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Login failed. Please check your credentials and try again.');
-      }
-
-      // Store the token in localStorage or cookies if needed
-      if (result.token) {
-        // You might want to use HttpOnly cookies in production
-        localStorage.setItem('authToken', result.token);
-      }
-
-      // Redirect to dashboard on successful login
-      router.push('/dashboard');
-      router.refresh(); // Ensure the page refreshes to update auth state
+      
+      // If we get here, login was successful
+      window.location.href = result?.url || '/companies';
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred during login. Please try again.');

@@ -64,8 +64,15 @@ const SkeletonLoader = () => (
 
 function AnalyticsPage() {
   const searchParams = useSearchParams();
-  const companyId = searchParams.get('companyId');
-  
+
+  // --- Get companyId: query param first, then fallback to localStorage ---
+  let companyId = searchParams.get('companyId') || localStorage.getItem('selectedCompanyId') || '';
+
+  // Keep localStorage in sync with latest selection
+  if (companyId) {
+    localStorage.setItem('selectedCompanyId', companyId);
+  }
+
   const { data, error, isLoading, mutate } = useSWR<AnalyticsData>(
     companyId ? `/api/dashboard/analytics?companyId=${companyId}` : null,
     fetcher,

@@ -3,44 +3,64 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Loading from './loading';
+import { CompanyProvider } from '@/contexts/CompanyContext';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(true);
+  const path = `${pathname}${searchParams}`;
 
+  // Set isMounted to true after component mounts
   useEffect(() => {
-    // Set loading to false after initial render
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 0);
-    return () => clearTimeout(timer);
+    setIsMounted(true);
+    setIsLoading(false);
+    
+    return () => {
+      setIsMounted(false);
+      setIsLoading(true);
+    };
   }, []);
 
-  // Show loading state when route changes
+  // Handle route changes
   useEffect(() => {
-    const handleStart = () => setIsLoading(true);
+    if (!isMounted) return;
+    
+    const handleStart = () => {
+      setIsLoading(true);
+    };
+    
     const handleComplete = () => {
+      setIsLoading(false);
+    };
+
+    // Simulate loading state for route changes
+    if (isMounted) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    };
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [path, isMounted]);
 
-    // Set loading to false after the first render
-    handleComplete();
-
-    return () => {
-      // Cleanup
-    };
-  }, [pathname, searchParams]);
+  // Don't render anything on the server
+  if (!isMounted) {
+    return null;
+  }
 
   return (
-    <>
-      {isLoading && <Loading />}
-      <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
-        {children}
-      </div>
-    </>
+    <CompanyProvider>
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <div className="min-h-screen">
+          {children}
+        </div>
+      )}
+    </CompanyProvider>
   );
 }
