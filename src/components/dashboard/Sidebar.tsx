@@ -14,7 +14,7 @@ export function Sidebar({ activeTab }: SidebarProps) {
   const navItems = [
     { id: 'dashboard', name: 'Dashboard', href: '/minDashboard', icon: Home },
     { id: 'reviews', name: 'Reviews', href: '/reviews', icon: MessageSquare },
-    { id: 'analytics', name: 'Analytics', href: '/analytics', icon: BarChart2 },
+    { id: 'analytics', name: 'Analytics', href: '/minDashboard/analytics', icon: BarChart2 },
     { id: 'settings', name: 'Settings', href: '/settings', icon: Settings },
   ];
 
