@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
+import { Building2, ChevronLeft, Download, Calendar, MoreHorizontal, RefreshCw, BarChart2, Star, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ReviewStats {
@@ -118,95 +118,229 @@ export default function MinDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Company Overview Header */}
       {currentCompany && (
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{currentCompany.name}</h1>
-              <p className="text-gray-600 mt-1">
-                {currentCompany.description || 'Welcome to your company dashboard'}
-              </p>
+        <div className="bg-gradient-to-r from-blue-50 to-white p-8 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                <Building2 className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{currentCompany.name}</h1>
+                <p className="text-gray-600 mt-1">
+                  {currentCompany.description || 'Welcome to your company dashboard'}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Company ID: {currentCompany.id}</p>
-              <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm text-gray-500 mb-1">Company ID: <span className="font-mono">{currentCompany.id}</span></p>
                 {currentCompany.status && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     {currentCompany.status}
                   </span>
                 )}
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => router.push('/companies')}
-                  className="group flex items-center space-x-1 transition-colors duration-200 border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <ChevronLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-                  <span>Companies</span>
-                </Button>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => router.push('/companies')}
+                className="group flex items-center justify-center space-x-1 transition-all duration-200 border-blue-200 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm h-9"
+              >
+                <ChevronLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                <span>Companies</span>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
       {/* KPI Cards */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Overview</h2>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
+            <p className="text-gray-500 text-sm">Key metrics and insights for your business</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" className="text-sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" className="text-sm">
+              <Calendar className="h-4 w-4 mr-2" />
+              This Month
+            </Button>
+          </div>
+        </div>
         <KPICards stats={enhancedStats} isLoading={isLoadingStats} />
       </div>
 
       {!selectedCompany ? (
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <p className="text-gray-600 mb-4">No company selected. Please select a company to view analytics.</p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => router.push('/companies')}>
-                  Select a Company
-                </Button>
-                <Button onClick={() => window.location.reload()} variant="outline">
-                  Refresh
-                </Button>
-              </div>
+        <Card className="border-dashed border-2 border-gray-200 bg-gray-50 hover:border-blue-200 transition-colors">
+          <CardContent className="p-8 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 mb-4">
+              <Building2 className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No company selected</h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              Please select a company to view analytics and performance metrics.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                onClick={() => router.push('/companies')} 
+                className="bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Select a Company
+              </Button>
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline" 
+                className="border-gray-300 hover:bg-gray-50"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Reviews</CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="reviews" fill="#3b82f6" name="Reviews" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold">Monthly Reviews</CardTitle>
+                  <BarChart2 className="h-5 w-5 text-blue-500" />
+                </div>
+                <p className="text-sm text-gray-500">Review activity over time</p>
+              </CardHeader>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <defs>
+                      <linearGradient id="reviewsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        borderRadius: '0.5rem',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="reviews" 
+                      fill="url(#reviewsGradient)" 
+                      name="Reviews" 
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1500}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold">Average Rating Trend</CardTitle>
+                  <Star className="h-5 w-5 text-amber-400 fill-amber-100" />
+                </div>
+                <p className="text-sm text-gray-500">Rating performance over time</p>
+              </CardHeader>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <defs>
+                      <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                    />
+                    <YAxis 
+                      domain={[0, 5]} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        borderRadius: '0.5rem',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="rating" 
+                      fill="url(#ratingGradient)" 
+                      name="Rating" 
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1500}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
           
+          {/* Recent Activity Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Average Rating Trend</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">Latest updates and notifications</p>
+                </div>
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50">
+                  View All
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis domain={[0, 5]} />
-                  <Tooltip />
-                  <Bar dataKey="rating" fill="#10b981" name="Rating" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent>
+              <div className="space-y-4">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="flex items-start pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mr-3">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">New review received</p>
+                      <p className="text-sm text-gray-500">A customer left a {4 + (item % 2)} star review</p>
+                      <p className="text-xs text-gray-400 mt-1">{item * 2} hours ago</p>
+                    </div>
+                    <div className="ml-4 flex-shrink-0">
+                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, MessageSquare, TrendingUp, Users } from 'lucide-react';
+import { Star, MessageSquare, TrendingUp, Users, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface KPICardsProps {
   stats: {
@@ -20,49 +20,92 @@ export function KPICards({ stats, isLoading }: KPICardsProps) {
       title: 'Total Reviews',
       value: stats.totalReviews,
       icon: MessageSquare,
-      change: '+12% from last month',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      change: { value: 12, positive: true },
+      changeText: 'from last month',
     },
     {
       title: 'Avg. Rating',
-      value: stats.averageRating ? `${stats.averageRating.toFixed(1)}/5` : 'N/A',
+      value: stats.averageRating ? `${stats.averageRating.toFixed(1)}` : 'N/A',
       icon: Star,
-      change: stats.averageRating ? `+0.2 from last month` : 'N/A',
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-500',
+      change: { value: 0.2, positive: true },
+      changeText: 'from last month',
+      showMax: true,
     },
     {
       title: 'Total Customers',
-      value: stats.totalCustomers || 'N/A',
+      value: stats.totalCustomers?.toLocaleString() || 'N/A',
       icon: Users,
-      change: '+8% from last month',
+      iconBg: 'bg-green-100',
+      iconColor: 'text-green-600',
+      change: { value: 8, positive: true },
+      changeText: 'from last month',
     },
     {
       title: 'Response Rate',
       value: stats.responseRate ? `${stats.responseRate}%` : 'N/A',
       icon: TrendingUp,
-      change: '+5% from last month',
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      change: { value: 5, positive: true },
+      changeText: 'from last month',
     },
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
       {kpis.map((kpi, index) => (
-        <Card key={index} className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              {kpi.title}
-            </CardTitle>
-            <kpi.icon className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{kpi.value}</div>
-                <p className="text-xs text-gray-500 mt-1">{kpi.change}</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <div 
+          key={index} 
+          className="relative bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">{kpi.title}</p>
+              {isLoading ? (
+                <Skeleton className="h-9 w-24 mt-2" />
+              ) : (
+                <div className="flex items-end space-x-2 mt-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {kpi.value}
+                    {kpi.showMax && <span className="text-lg font-normal text-gray-400">/5</span>}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className={`p-2.5 rounded-lg ${kpi.iconBg} ${kpi.iconColor}`}>
+              <kpi.icon className="h-5 w-5" />
+            </div>
+          </div>
+          
+          {!isLoading && kpi.change && (
+            <div className="mt-4 flex items-center">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                kpi.change.positive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {kpi.change.positive ? (
+                  <svg className="-ml-0.5 mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 8 8">
+                    <path d="M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z" />
+                  </svg>
+                ) : (
+                  <svg className="-ml-0.5 mr-1 h-3 w-3 text-red-500" fill="currentColor" viewBox="0 0 8 8">
+                    <path d="M2.3 1.27L.6 3.47c-.4 1.04.46 1.4 1.1.8l1.1-1.4 3.4 3.8c.6.63 1.6.27 1.2-.7l-4-4.6c-.43-.5-.8-.4-1.1-.1z" />
+                  </svg>
+                )}
+                {kpi.change.value}%
+              </span>
+              <span className="ml-2 text-xs text-gray-500">{kpi.changeText}</span>
+            </div>
+          )}
+          
+          {/* Decorative element */}
+          <div className="absolute top-0 right-0 -mr-1 -mt-1 w-4 h-4 rounded-bl-full bg-gradient-to-br from-blue-50 to-white"></div>
+        </div>
       ))}
     </div>
   );
