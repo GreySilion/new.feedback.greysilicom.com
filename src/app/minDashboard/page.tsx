@@ -2,19 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { useSession } from 'next-auth/react';
 import { useCompany } from '@/contexts/CompanyContext';
-import { MessageSquare, Star, MessageCircle } from 'lucide-react';
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { ReviewList } from '@/components/dashboard/ReviewList';
 import { getReviewStats } from '@/lib/review-utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { KPICards } from '@/components/dashboard/KPICards';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ReviewStats {
   totalReviews: number;
   averageRating: number | null;
+  totalCustomers?: number;
+  responseRate?: number;
 }
+
+// Mock data for charts
+const chartData = [
+  { name: 'Jan', rating: 4.2, reviews: 24 },
+  { name: 'Feb', rating: 4.5, reviews: 32 },
+  { name: 'Mar', rating: 4.1, reviews: 28 },
+  { name: 'Apr', rating: 4.7, reviews: 41 },
+  { name: 'May', rating: 4.4, reviews: 35 },
+  { name: 'Jun', rating: 4.6, reviews: 38 },
+];
 
 export default function MinDashboard() {
   const router = useRouter();
@@ -96,70 +109,108 @@ export default function MinDashboard() {
     );
   }
 
-  // Get company object from context for more details
-  const companyObj = companies.find(c => c.id.toString() === selectedCompany);
+  // Get the current company details
+  const currentCompany = companies.find(company => company.id.toString() === selectedCompany);
+  const enhancedStats = {
+    ...stats,
+    totalCustomers: stats.totalCustomers || 0,
+    responseRate: stats.responseRate || 0,
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Welcome to Min Dashboard</h1>
-      
-      {selectedCompany && companyObj ? (
-        <div className="space-y-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold">{companyObj.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {companyObj.status || 'Active'} • {session.user.email}
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 mb-8">
-            <MetricCard
-              title="Total Feedback"
-              value={stats.totalReviews.toLocaleString()}
-              icon={<MessageSquare className="h-4 w-4" />}
-              isLoading={isLoadingStats}
-              description="Total number of reviews received"
-            />
-            <MetricCard
-              title="Average Rating"
-              value={stats.averageRating ? `${stats.averageRating}/5` : 'N/A'}
-              icon={<Star className="h-4 w-4" />}
-              isLoading={isLoadingStats}
-              description="Average rating from all reviews"
-            />
-          </div>
-
-          <div className="mt-8">
-            <div className="flex items-center mb-4">
-              <MessageCircle className="h-5 w-5 mr-2" />
-              <h2 className="text-lg font-medium">Customer Reviews</h2>
+    <div className="space-y-6">
+      {/* Company Overview Header */}
+      {currentCompany && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{currentCompany.name}</h1>
+              <p className="text-gray-600 mt-1">
+                {currentCompany.description || 'Welcome to your company dashboard'}
+              </p>
             </div>
-            <ReviewList companyId={selectedCompany} />
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Company ID: {currentCompany.id}</p>
+              <div className="flex items-center space-x-3">
+                {currentCompany.status && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {currentCompany.status}
+                  </span>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => router.push('/companies')}
+                  className="group flex items-center space-x-1 transition-colors duration-200 border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <ChevronLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                  <span>Companies</span>
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-          <p className="text-yellow-700">
-            No company selected. Please select a company from the Companies page.
-          </p>
-          <Button 
-            onClick={() => router.push('/companies')} 
-            variant="outline" 
-            className="mt-2"
-          >
-            Go to Companies
-          </Button>
         </div>
       )}
 
-      <div className="flex gap-2 mt-6">
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Refresh Page
-        </Button>
-        <Button onClick={() => router.push('/companies')} variant="outline">
-          Back to Companies
-        </Button>
+      {/* KPI Cards */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Overview</h2>
+        <KPICards stats={enhancedStats} isLoading={isLoadingStats} />
       </div>
+
+      {!selectedCompany ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">No company selected. Please select a company to view analytics.</p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => router.push('/companies')}>
+                  Select a Company
+                </Button>
+                <Button onClick={() => window.location.reload()} variant="outline">
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Reviews</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="reviews" fill="#3b82f6" name="Reviews" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Average Rating Trend</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis domain={[0, 5]} />
+                  <Tooltip />
+                  <Bar dataKey="rating" fill="#10b981" name="Rating" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

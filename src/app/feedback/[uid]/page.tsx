@@ -32,18 +32,30 @@ export default function FeedbackPage() {
     // Fetch user details using UID
     const fetchUserDetails = async () => {
       try {
+        console.log('Fetching feedback for UID:', uid);
         const response = await fetch(`/api/feedback/${uid}`);
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch user details');
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          throw new Error(errorData.error || `Failed to fetch user details (${response.status})`);
         }
         
         const data = await response.json();
-        setUserName(data.name || 'Valued Customer');
+        console.log('Received feedback data:', data);
+        
+        // Use userName from the API response, fallback to 'Valued Customer'
+        setUserName(data.userName || data.name || 'Valued Customer');
         
         // If already has a rating, pre-fill the form
         if (data.rating) {
-          setRating(parseInt(data.rating));
+          setRating(Number(data.rating));
           setComment(data.review || '');
           if (data.review) {
             setIsSubmitted(true);
@@ -51,8 +63,9 @@ export default function FeedbackPage() {
         }
         
       } catch (err) {
-        console.error('Error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load feedback form');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load feedback form';
+        console.error('Error in fetchUserDetails:', errorMessage, err);
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
