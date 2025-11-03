@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const redirectTo = searchParams.get('from') || '/dashboard';
+  const redirectTo = searchParams.get('from') || '/companies';
 
   const formSchema = z.object({
     email: z.string().email('Please enter a valid email address'),
