@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PoolConnection, ResultSetHeader, RowDataPacket, OkPacket } from 'mysql2/promise';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { RowDataPacket, FieldPacket, ResultSetHeader } from 'mysql2/promise';
 import pool from '@/lib/db';
 
 type QueryResult<T = RowDataPacket> = T[] & { affectedRows?: number; insertId?: number };
@@ -15,6 +16,7 @@ interface ReviewRow extends RowDataPacket {
   user_id: number | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface UserRow extends RowDataPacket {
   name?: string;
 }
@@ -54,10 +56,10 @@ export async function GET(
       // Find the feedback by UID
       // First, get the feedback with just the basic data
       // First, get the review details using the UID
-      const [reviewRows] = await connection.query<QueryResult<{id: number, user_id: number, company_id: number}>>(
+      const [reviewRows] = await connection.query<RowDataPacket[]>(
         'SELECT id, user_id, company_id FROM reviews WHERE uid = ?',
         [uid]
-      ) as [QueryResult<{id: number, user_id: number, company_id: number}>, any];
+      ) as [RowDataPacket[], any];
       
       if (!reviewRows || reviewRows.length === 0) {
         return NextResponse.json(
@@ -75,7 +77,7 @@ export async function GET(
          LEFT JOIN companies c ON r.company_id = c.id
          WHERE r.id = ?`, 
         [review.id]
-      ) as [QueryResult<FeedbackWithRelations>, any];
+      ) as [QueryResult<FeedbackWithRelations>, FieldPacket[]];
       
       const feedback = reviewWithDetails[0];
 
@@ -166,10 +168,10 @@ export async function PATCH(
         // First, update the review with the new data
         // Only update status to 1 (replied) if it's not already set
         // Otherwise, keep the existing status (0 for pending)
-        const [updateResult] = await connection.execute<OkPacket>(
+        const [updateResult] = await connection.execute<ResultSetHeader>(
           'UPDATE reviews SET rating = ?, review = ?, status = COALESCE(status, 0), updated_at = NOW() WHERE id = ?',
           [rating, reviewText, reviewData.id]
-        );
+        ) as [ResultSetHeader, FieldPacket[]];
         
         console.log('Update result:', updateResult);
         
@@ -195,10 +197,10 @@ export async function PATCH(
         // Get company name if available
         let companyName = null;
         if (updatedReview.company_id) {
-          const [companyRows] = await connection.query<{name: string}[]>(
+          const [companyRows] = await connection.query<RowDataPacket[]>(
             'SELECT name FROM companies WHERE id = ?',
             [updatedReview.company_id]
-          );
+          ) as [RowDataPacket[], any];
           companyName = companyRows[0]?.name || null;
         }
         
@@ -223,25 +225,25 @@ export async function PATCH(
       }
 
       // Get the updated review with company data
-      const [updatedRows] = await connection.query<QueryResult<FeedbackWithRelations>>(
+      const [updatedRows] = await connection.query<RowDataPacket[]>(
         `SELECT r.*, c.name as companyName, r.name as userName
          FROM reviews r
          LEFT JOIN companies c ON r.company_id = c.id
-         WHERE r.id = ?`,
-        [reviewId]
-      ) as [QueryResult<FeedbackWithRelations>, any];
+         WHERE r.uid = ?`,
+        [uid]
+      ) as [RowDataPacket[], any];
       
-      const updatedFeedback = updatedRows[0];
+      const updatedFeedback = updatedRows[0] as FeedbackWithRelations;
       
       // If we have a result, get the user's name separately
-      if (updatedFeedback) {
-        const [userRows] = await connection.query<QueryResult<UserRow>>(
+      if (updatedFeedback && updatedFeedback.user_id) {
+        const [userRows] = await connection.query<RowDataPacket[]>(
           'SELECT name FROM users WHERE id = ?',
           [updatedFeedback.user_id]
-        ) as [QueryResult<UserRow>, any];
+        ) as [RowDataPacket[], any];
         
         if (userRows && userRows.length > 0) {
-          updatedFeedback.userName = userRows[0].name;
+          updatedFeedback.userName = userRows[0].name as string;
         }
       }
 

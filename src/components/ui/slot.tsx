@@ -16,13 +16,13 @@ const Slot = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement> & {
         ...rest,
         ...children.props,
         ref: (node: HTMLElement | null) => {
-          // @ts-ignore
+          // @ts-expect-error - ref might be a callback ref or a ref object
           if (ref) ref(node);
-          const { ref: childRef } = children as any;
+          const childRef = (children as React.RefAttributes<HTMLElement>).ref;
           if (typeof childRef === 'function') {
             childRef(node);
           } else if (childRef) {
-            childRef.current = node;
+            (childRef as React.MutableRefObject<HTMLElement | null>).current = node;
           }
         },
       });
