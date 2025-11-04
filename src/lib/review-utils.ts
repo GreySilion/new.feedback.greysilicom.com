@@ -1,3 +1,8 @@
+interface Review {
+  rating?: number;
+  // Add other review properties as needed
+}
+
 interface ReviewStats {
   totalReviews: number;
   averageRating: number | null;
@@ -24,7 +29,7 @@ export async function getReviewStats(companyId: string | number): Promise<Review
       return { totalReviews: 0, averageRating: null };
     }
 
-    const totalRating = reviews.reduce((sum: number, review: any) => {
+    const totalRating = reviews.reduce((sum: number, review: Review) => {
       return sum + (review.rating || 0);
     }, 0);
     

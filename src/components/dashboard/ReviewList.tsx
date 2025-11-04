@@ -5,16 +5,20 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Review } from '@/types/review';
 import { formatDate } from '@/lib/utils';
-import { Star, MessageSquare, Reply } from 'lucide-react';
+import { Star, MessageSquare, Reply, MailCheck, MailQuestion } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface ReviewListProps {
   companyId: string | number;
   className?: string;
 }
 
+type ReviewTab = 'pending' | 'replied';
+
 export function ReviewList({ companyId, className = '' }: ReviewListProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [activeTab, setActiveTab] = useState<ReviewTab>('pending');
   const [loading, setLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<string | number | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -190,12 +194,77 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
     );
   }
 
+  // Filter reviews based on active tab
+  const filteredReviews = reviews.filter(review => {
+    if (activeTab === 'pending') return !isReplied(review);
+    return isReplied(review);
+  });
+
   return (
     <div className={`space-y-6 ${className}`}>
-      <h2 className="text-lg font-medium">Customer Reviews</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-lg font-medium">Customer Reviews</h2>
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          <button
+            type="button"
+            onClick={() => setActiveTab('pending')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-l-lg border',
+              activeTab === 'pending' 
+                ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <MailQuestion className="h-4 w-4" />
+              <span>Pending</span>
+              {reviews.filter(r => !isReplied(r)).length > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                  {reviews.filter(r => !isReplied(r)).length}
+                </span>
+              )}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('replied')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium rounded-r-lg border-t border-b border-r',
+              activeTab === 'replied' 
+                ? 'bg-green-50 text-green-700 border-green-300' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <MailCheck className="h-4 w-4" />
+              <span>Replied</span>
+              {reviews.filter(r => isReplied(r)).length > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">
+                  {reviews.filter(r => isReplied(r)).length}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
+      </div>
       
-      <div className="space-y-4">
-        {reviews.map((review) => (
+      <div className="space-y-4 transition-opacity duration-200">
+        {filteredReviews.length === 0 ? (
+          <div className="text-center py-8 border rounded-lg bg-gray-50">
+            <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">
+              {activeTab === 'pending' 
+                ? 'No pending reviews' 
+                : 'No replied reviews yet'}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {activeTab === 'pending'
+                ? 'All caught up! No pending reviews at the moment.'
+                : 'Replied reviews will appear here.'}
+            </p>
+          </div>
+        ) : (
+          filteredReviews.map((review) => (
           <div key={review.id} className="border rounded-lg overflow-hidden">
             <div className="p-4">
               <div className="flex items-start justify-between">
@@ -301,7 +370,8 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
               </div>
             )}
           </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

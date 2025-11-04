@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { getReviewStats } from '@/lib/review-utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { fetchAnalytics, type AnalyticsData } from '@/lib/analytics-utils';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, ChevronLeft, Download, Calendar, MoreHorizontal, RefreshCw, BarChart2, Star, MessageSquare } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ReviewStats {
   totalReviews: number;
@@ -19,15 +20,25 @@ interface ReviewStats {
   responseRate?: number;
 }
 
-// Mock data for charts
-const chartData = [
-  { name: 'Jan', rating: 4.2, reviews: 24 },
-  { name: 'Feb', rating: 4.5, reviews: 32 },
-  { name: 'Mar', rating: 4.1, reviews: 28 },
-  { name: 'Apr', rating: 4.7, reviews: 41 },
-  { name: 'May', rating: 4.4, reviews: 35 },
-  { name: 'Jun', rating: 4.6, reviews: 38 },
-];
+// Format weekly data for the chart
+const formatWeeklyData = (weeklyData: { day: string; avg_rating: number }[]) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return days.map(day => {
+    const dayData = weeklyData.find(d => d.day === day) || { day, avg_rating: 0 };
+    return {
+      name: day,
+      rating: Number(dayData.avg_rating.toFixed(1)),
+    };
+  });
+};
+
+// Format monthly data for the chart
+const formatMonthlyData = (monthlyData: { month: string; total_reviews: number }[]) => {
+  return monthlyData.map(item => ({
+    name: item.month,
+    reviews: item.total_reviews,
+  }));
+};
 
 export default function MinDashboard() {
   const router = useRouter();
@@ -41,29 +52,50 @@ export default function MinDashboard() {
   const { selectedCompany, companies, loadCompanies } = useCompany();
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<ReviewStats>({ totalReviews: 0, averageRating: null });
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
-  // Fetch review stats when selectedCompany changes
+  // Fetch review stats and analytics when selectedCompany changes
   useEffect(() => {
-    const fetchReviewStats = async () => {
+    const fetchData = async () => {
       if (!selectedCompany) {
         setIsLoadingStats(false);
+        setIsLoadingAnalytics(false);
         return;
       }
 
       try {
         setIsLoadingStats(true);
-        const reviewStats = await getReviewStats(selectedCompany);
+        setIsLoadingAnalytics(true);
+        setError(null);
+
+        // Fetch review stats
+        const [reviewStats, analyticsData] = await Promise.all([
+          getReviewStats(selectedCompany),
+          fetchAnalytics(selectedCompany)
+        ]);
+
+        if (!reviewStats) {
+          throw new Error('Failed to load review stats');
+        }
+
         setStats(reviewStats);
+        setAnalytics(analyticsData);
       } catch (error) {
-        console.error('Error fetching review stats:', error);
+        console.error('Error fetching data:', error);
+        setError('Failed to load analytics data. Please try refreshing the page.');
+        // Set default values to prevent undefined errors
+        setStats({ totalReviews: 0, averageRating: null });
       } finally {
         setIsLoadingStats(false);
+        setIsLoadingAnalytics(false);
       }
     };
 
-    fetchReviewStats();
+    fetchData();
   }, [selectedCompany]);
 
   useEffect(() => {
@@ -101,6 +133,23 @@ export default function MinDashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg max-w-md w-full text-center">
+          <p className="font-medium">Error Loading Analytics</p>
+          <p className="text-sm mt-1">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -116,6 +165,10 @@ export default function MinDashboard() {
     totalCustomers: stats.totalCustomers || 0,
     responseRate: stats.responseRate || 0,
   };
+
+  // Format chart data
+  const weeklyChartData = analytics ? formatWeeklyData(analytics.weekly) : [];
+  const monthlyChartData = analytics ? formatMonthlyData(analytics.monthly) : [];
 
   return (
     <div className="space-y-8">
@@ -220,40 +273,52 @@ export default function MinDashboard() {
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <defs>
-                      <linearGradient id="reviewsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6b7280', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6b7280', fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="reviews" 
-                      fill="url(#reviewsGradient)" 
-                      name="Reviews" 
-                      radius={[4, 4, 0, 0]}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
+                  {isLoadingAnalytics || !analytics ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                  ) : monthlyChartData.length > 0 ? (
+                    <BarChart data={monthlyChartData}>
+                      <defs>
+                        <linearGradient id="reviewsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="reviews" 
+                        fill="url(#reviewsGradient)" 
+                        name="Reviews" 
+                        radius={[4, 4, 0, 0]}
+                        animationDuration={1500}
+                      />
+                    </BarChart>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                      <BarChart2 className="h-10 w-10 text-gray-300 mb-2" />
+                      <p className="text-gray-500 text-sm">No review data available</p>
+                      <p className="text-gray-400 text-xs mt-1">Reviews will appear here once available</p>
+                    </div>
+                  )}
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -268,41 +333,57 @@ export default function MinDashboard() {
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <defs>
-                      <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6b7280', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      domain={[0, 5]} 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6b7280', fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="rating" 
-                      fill="url(#ratingGradient)" 
-                      name="Rating" 
-                      radius={[4, 4, 0, 0]}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
+                  {isLoadingAnalytics || !analytics ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                  ) : weeklyChartData.length > 0 ? (
+                    <LineChart data={weeklyChartData}>
+                      <defs>
+                        <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                      />
+                      <YAxis 
+                        domain={[0, 5]} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                        }}
+                        formatter={(value: number) => [`${value}`, 'Average Rating']}
+                      />
+                      <Line 
+                        type="monotone"
+                        dataKey="rating"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: '#10b981' }}
+                        activeDot={{ r: 6, fill: '#059669' }}
+                        name="Rating"
+                        animationDuration={1500}
+                      />
+                    </LineChart>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                      <Star className="h-10 w-10 text-gray-300 mb-2" />
+                      <p className="text-gray-500 text-sm">No rating data available</p>
+                      <p className="text-gray-400 text-xs mt-1">Ratings will appear here once available</p>
+                    </div>
+                  )}
                 </ResponsiveContainer>
               </CardContent>
             </Card>

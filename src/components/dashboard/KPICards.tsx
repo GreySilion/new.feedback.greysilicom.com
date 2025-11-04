@@ -1,8 +1,7 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, MessageSquare, TrendingUp, Users, ChevronUp, ChevronDown } from 'lucide-react';
+import { Star, MessageSquare, TrendingUp, Users } from 'lucide-react';
 
 interface KPICardsProps {
   stats: {
@@ -18,40 +17,44 @@ export function KPICards({ stats, isLoading }: KPICardsProps) {
   const kpis = [
     {
       title: 'Total Reviews',
-      value: stats.totalReviews,
+      value: stats?.totalReviews?.toLocaleString() ?? '0',
       icon: MessageSquare,
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       change: { value: 12, positive: true },
       changeText: 'from last month',
+      loading: isLoading || !stats,
     },
     {
       title: 'Avg. Rating',
-      value: stats.averageRating ? `${stats.averageRating.toFixed(1)}` : 'N/A',
+      value: stats?.averageRating ? `${Number(stats.averageRating).toFixed(1)}` : 'N/A',
       icon: Star,
       iconBg: 'bg-amber-100',
       iconColor: 'text-amber-500',
       change: { value: 0.2, positive: true },
       changeText: 'from last month',
       showMax: true,
+      loading: isLoading || !stats,
     },
     {
       title: 'Total Customers',
-      value: stats.totalCustomers?.toLocaleString() || 'N/A',
+      value: stats?.totalCustomers ? stats.totalCustomers.toLocaleString() : 'N/A',
       icon: Users,
       iconBg: 'bg-green-100',
       iconColor: 'text-green-600',
       change: { value: 8, positive: true },
       changeText: 'from last month',
+      loading: isLoading || !stats,
     },
     {
       title: 'Response Rate',
-      value: stats.responseRate ? `${stats.responseRate}%` : 'N/A',
+      value: stats?.responseRate ? `${stats.responseRate}%` : 'N/A',
       icon: TrendingUp,
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
       change: { value: 5, positive: true },
       changeText: 'from last month',
+      loading: isLoading || !stats,
     },
   ];
 
@@ -61,11 +64,13 @@ export function KPICards({ stats, isLoading }: KPICardsProps) {
         <div 
           key={index} 
           className="relative bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+          aria-busy={kpi.loading}
+          aria-live="polite"
         >
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">{kpi.title}</p>
-              {isLoading ? (
+              {kpi.loading ? (
                 <Skeleton className="h-9 w-24 mt-2" />
               ) : (
                 <div className="flex items-end space-x-2 mt-2">
@@ -76,12 +81,12 @@ export function KPICards({ stats, isLoading }: KPICardsProps) {
                 </div>
               )}
             </div>
-            <div className={`p-2.5 rounded-lg ${kpi.iconBg} ${kpi.iconColor}`}>
+            <div className={`p-2.5 rounded-lg ${kpi.iconBg} ${kpi.iconColor} ${kpi.loading ? 'opacity-50' : ''}`}>
               <kpi.icon className="h-5 w-5" />
             </div>
           </div>
           
-          {!isLoading && kpi.change && (
+          {!kpi.loading && kpi.change && (
             <div className="mt-4 flex items-center">
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                 kpi.change.positive 

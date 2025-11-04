@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { 
   LineChart, 
-  Line, 
   PieChart, 
   Pie, 
   Cell,
@@ -14,7 +13,7 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  TooltipProps
+  TooltipProps as RechartsTooltipProps
 } from 'recharts';
 
 interface ChartData {
@@ -149,13 +148,19 @@ export default function AnalyticsCharts() {
   const totalReviews = chartData.monthly.reduce((sum, item) => sum + item.total_reviews, 0);
 
   // Custom tooltip for the line chart
-  const LineTooltip = ({ active, payload, label }: any) => {
+  const CustomLineTooltip = ({
+    active,
+    payload,
+  }: {
+    active?: boolean;
+    payload?: Array<{ payload: { fullDay?: string; avg_rating?: number } }>;
+  }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const data = payload[0]?.payload;
       return (
         <div className="bg-white p-3 border border-gray-200 rounded shadow-sm text-sm">
-          <p className="font-medium">{data.fullDay}</p>
-          <p>Average Rating: <span className="font-medium">{data.avg_rating.toFixed(2)}</span></p>
+          {data.fullDay && <p className="font-medium">{data.fullDay}</p>}
+          <p>Average Rating: <span className="font-medium">{data.avg_rating?.toFixed(2) || 'N/A'}</span></p>
         </div>
       );
     }
@@ -163,7 +168,13 @@ export default function AnalyticsCharts() {
   };
 
   // Custom tooltip for the pie chart
-  const PieTooltip = ({ active, payload }: any) => {
+  const PieTooltip = ({ 
+    active, 
+    payload 
+  }: { 
+    active?: boolean; 
+    payload?: Array<{ payload: { month: string; total_reviews: number } }> 
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -179,17 +190,23 @@ export default function AnalyticsCharts() {
 
   // Custom label for pie chart
   const renderCustomizedLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-    index,
-  }: any) => {
+    cx = '50%',
+    cy = '50%',
+    midAngle = 0,
+    innerRadius = 0,
+    outerRadius = 0,
+    percent = 0,
+  }: {
+    cx?: string | number;
+    cy?: string | number;
+    midAngle?: number;
+    innerRadius?: number;
+    outerRadius?: number;
+    percent?: number;
+  }) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN) * 1.2;
-    const y = cy + radius * Math.sin(-midAngle * RADIAN) * 1.2;
+    const x = Number(cx) + radius * Math.cos(-midAngle * RADIAN) * 1.2;
+    const y = Number(cy) + radius * Math.sin(-midAngle * RADIAN) * 1.2;
 
     return (
       <text
@@ -233,30 +250,8 @@ export default function AnalyticsCharts() {
               <YAxis 
                 domain={[0, 5]} 
                 tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={false}
+                axisLine={{ stroke: '#e5e7eb' }}
                 tickLine={false}
-                tickFormatter={(value) => value.toFixed(1)}
-                width={30}
-              />
-              <Tooltip content={<LineTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="avg_rating"
-                name="Rating"
-                stroke="#3b82f6"
-                strokeWidth={3}
-                dot={{
-                  r: 4,
-                  stroke: '#fff',
-                  strokeWidth: 2,
-                  fill: '#3b82f6',
-                }}
-                activeDot={{
-                  r: 6,
-                  stroke: '#fff',
-                  strokeWidth: 2,
-                  fill: '#2563eb',
-                }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -290,7 +285,7 @@ export default function AnalyticsCharts() {
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2} />
                   ))}
                 </Pie>
-                <Tooltip content={<PieTooltip />} />
+                <Tooltip content={<CustomLineTooltip />} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
