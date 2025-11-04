@@ -1,5 +1,6 @@
 // This is a Server Component by default
 import Link from 'next/link';
+import Image from 'next/image';
 import { EnvelopeIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { Instagram, Twitter, Linkedin, Facebook } from 'lucide-react';
 
@@ -49,10 +50,13 @@ export default function Footer() {
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
             <div className="flex items-center">
-              <img 
+              <Image 
                 src="/images/logo/greysiliconlogo.png" 
                 alt="Grey Silicon Logo" 
+                width={150}
+                height={64}
                 className="h-16 w-auto"
+                priority
               />
             </div>
             <p className="text-slate-400 text-sm leading-6 mt-4">

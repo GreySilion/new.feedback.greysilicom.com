@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -43,10 +44,13 @@ export default function Navbar() {
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <div className="flex items-center space-x-2">
-                <img 
+                <Image 
                   src="/images/logo/greysiliconlogo.png" 
                   alt="Grey Silicon Logo" 
+                  width={150}
+                  height={48}
                   className="h-12 w-auto drop-shadow-sm"
+                  priority
                 />
                 <span className="text-slate-800 font-bold text-xl hidden sm:inline-block">
                   Grey Silicon
