@@ -9,23 +9,58 @@ import mysql from 'mysql2/promise';
 // Enable SQL logging in development
 const debug = process.env.NODE_ENV !== 'production';
 
+// Define parameter types for SQL queries
+type QueryParams = (string | number | boolean | null)[];
+
+// Define error types
+interface ErrorDetails {
+  message: string;
+  code?: string;
+  sql?: string;
+  sqlMessage?: string;
+  sqlState?: string;
+}
+
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+type ErrorResponseDetails = ErrorDetails | ValidationError[];
+
+// Type for database errors
+interface DatabaseError extends Error {
+  code?: string;
+  sqlState?: string;
+  sqlMessage?: string;
+  stack?: string;
+}
+
 // Helper function to log SQL queries with error handling
-const queryWithLog = async (sql: string, params: any[] = []) => {
+const queryWithLog = async (sql: string, params: QueryParams = []) => {
   if (debug) {
     console.log('Executing query:', mysql.format(sql, params));
   }
+  
   try {
     const result = await pool.query(sql, params);
     return result;
-  } catch (error: any) {
-    const errorInfo = {
-      message: error.message,
-      code: error.code,
+  } catch (error: unknown) {
+    const dbError = error as DatabaseError;
+    
+    const errorInfo: ErrorDetails = {
+      message: dbError.message || 'An unknown database error occurred',
+      code: dbError.code,
       sql: mysql.format(sql, params),
-      sqlMessage: error.sqlMessage,
-      sqlState: error.sqlState
+      sqlMessage: dbError.sqlMessage,
+      sqlState: dbError.sqlState
     };
-    console.error('Database query error:', errorInfo);
+    
+    console.error('Database query error:', {
+      ...errorInfo,
+      ...(process.env.NODE_ENV === 'development' && { stack: dbError.stack })
+    });
+    
     throw error;
   }
 };
@@ -37,12 +72,20 @@ const loginSchema = z.object({
 });
 
 // Helper function to create error response
-const errorResponse = (message: string, status: number = 400, details?: any) => {
-  const response = {
+const errorResponse = (message: string, status: number = 400, details?: ErrorResponseDetails) => {
+  const response: {
+    success: boolean;
+    message: string;
+    details?: ErrorResponseDetails;
+  } = {
     success: false,
     message,
-    ...(debug && details && { details })
   };
+
+  if (debug && details) {
+    response.details = details;
+  }
+
   return new NextResponse(JSON.stringify(response), {
     status,
     headers: { 'Content-Type': 'application/json' }
@@ -63,15 +106,18 @@ export async function POST(request: Request) {
     let validatedData;
     try {
       validatedData = loginSchema.parse(body);
-    } catch (error) {
-      return errorResponse(
-        'Validation failed',
-        400,
-        error.errors?.map((err: any) => ({
-          field: err.path.join('.'),
-          message: err.message
-        }))
-      );
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        return errorResponse(
+          'Validation failed',
+          400,
+          error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        );
+      }
+      return errorResponse('An unexpected error occurred during validation', 500);
     }
 
     const { email, password } = validatedData;
@@ -179,46 +225,42 @@ export async function POST(request: Request) {
         }
       });
 
-    } catch (error) {
-      console.error('Token generation error:', error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Token generation error:', {
+          message: error.message,
+          ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        });
+      } else {
+        console.error('Token generation error:', error);
+      }
       return errorResponse('Failed to generate authentication token', 500);
     }
 
-  } catch (error: any) {
-    console.error('Login error:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-      ...(error.sqlState && { sqlState: error.sqlState })
-    });
-    
+  } catch (error: unknown) {
+    // Handle Zod validation errors
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          success: false,
-          message: 'Validation error', 
-          errors: error.issues.map((issue: { message: string }) => issue.message)
-        },
-        { status: 400 }
+      console.error('Validation error:', error.issues);
+      return errorResponse(
+        'Validation failed',
+        400,
+        error.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
       );
     }
     
-    // Handle specific MySQL errors
-    let errorMessage = 'An error occurred during login';
-    if (error.code === 'ER_NO_SUCH_TABLE') {
-      errorMessage = 'Database table does not exist. Please check your database setup.';
+    // Handle other errors
+    if (error instanceof Error) {
+      console.error('Login error:', {
+        message: error.message,
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+      });
+    } else {
+      console.error('An unknown error occurred during login');
     }
     
-    return NextResponse.json(
-      { 
-        success: false,
-        message: errorMessage,
-        ...(process.env.NODE_ENV === 'development' && { 
-          error: error.message,
-          code: error.code 
-        })
-      },
-      { status: 500 }
-    );
+    return errorResponse('An error occurred during login. Please try again.', 500);
   }
 }

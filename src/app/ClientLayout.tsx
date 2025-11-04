@@ -3,44 +3,33 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Loading from './loading';
+import { CompanyProvider } from '@/contexts/CompanyContext';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(true);
+  const path = `${pathname}${searchParams}`;
 
+  // Handle route changes
   useEffect(() => {
-    // Set loading to false after initial render
+    setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 0);
+    }, 300);
+
     return () => clearTimeout(timer);
-  }, []);
-
-  // Show loading state when route changes
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    };
-
-    // Set loading to false after the first render
-    handleComplete();
-
-    return () => {
-      // Cleanup
-    };
-  }, [pathname, searchParams]);
+  }, [path]);
 
   return (
-    <>
-      {isLoading && <Loading />}
-      <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
-        {children}
-      </div>
-    </>
+    <CompanyProvider>
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <div className="min-h-screen">
+          {children}
+        </div>
+      )}
+    </CompanyProvider>
   );
 }

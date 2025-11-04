@@ -3,11 +3,13 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface Company {
+export interface Company {
   id: string | number;
   name: string;
   status?: string;
-  // Add other company properties as needed
+  created_at?: string;
+  // Additional properties that might come from the API
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 interface CompanyContextType {
@@ -134,22 +136,36 @@ export function CompanyProvider({ children, initialCompanyId }: CompanyProviderP
   // Save selected company to localStorage and update state
   const selectCompany = useCallback(async (companyId: string | null) => {
     try {
-      // Save to localStorage
       if (companyId) {
-        localStorage.setItem('selectedCompanyId', companyId);
+        const companyIdStr = companyId.toString();
+        // Store in localStorage for persistence
+        localStorage.setItem('selectedCompanyId', companyIdStr);
+        
+        // Update state
+        setState(prev => ({
+          ...prev,
+          selectedCompany: companyIdStr,
+          error: null,
+        }));
+        
+        // Use push for SPA navigation
+        router.push(`/minDashboard?companyId=${companyIdStr}`, { scroll: false });
       } else {
         localStorage.removeItem('selectedCompanyId');
+        setState(prev => ({
+          ...prev,
+          selectedCompany: null,
+        }));
+        router.push('/minDashboard', { scroll: false });
       }
-
+    } catch (err) {
+      console.error('Error selecting company:', err);
       setState(prev => ({
         ...prev,
-        selectedCompany: companyId,
+        error: 'Failed to select company',
       }));
-    } catch (error) {
-      console.error('Error selecting company:', error);
-      throw error;
     }
-  }, []);
+  }, [router]);
 
   const clearSelectedCompany = useCallback(() => {
     localStorage.removeItem('selectedCompanyId');

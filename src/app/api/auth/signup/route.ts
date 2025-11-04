@@ -6,6 +6,7 @@ import pool from '@/lib/db';
 // Enable SQL logging in development
 const debug = process.env.NODE_ENV !== 'production';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type UserRow = {
   id: number;
   username: string;
@@ -22,24 +23,32 @@ type UserRow = {
 
 type ResultSet = [mysql.RowDataPacket[] | mysql.RowDataPacket[][] | mysql.ResultSetHeader, mysql.FieldPacket[]];
 
+// Type for SQL query parameters
+type QueryParams = (string | number | boolean | null | Date)[];
+
 // Helper function to log SQL queries in development
-const queryWithLog = async (sql: string, params: any[] = []) => {
+const queryWithLog = async (sql: string, params: QueryParams = []) => {
   if (debug) {
     console.log('Executing query:', mysql.format(sql, params));
   }
   try {
     const result = await pool.query(sql, params);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error & {
+      code?: string;
+      sqlMessage?: string;
+      sqlState?: string;
+    };
     const errorInfo = {
-      message: error.message,
-      code: error.code,
+      message: err.message,
+      code: err.code,
       sql: mysql.format(sql, params),
-      sqlMessage: error.sqlMessage,
-      sqlState: error.sqlState
+      sqlMessage: err.sqlMessage,
+      sqlState: err.sqlState
     };
     console.error('Database query error:', errorInfo);
-    throw error;
+    throw new Error(err.message);
   }
 };
 
@@ -64,21 +73,6 @@ export async function POST(request: Request) {
     const existingEmail = emailRows as mysql.RowDataPacket[];
     if (existingEmail?.length > 0) {
       return NextResponse.json(
-        { message: 'A user with this email already exists' },
-        { status: 400 }
-      );
-    }
-
-    // Check if username is already taken
-    const [usernameRows] = await queryWithLog(
-      'SELECT id FROM users WHERE username = ?',
-      [username]
-    ) as ResultSet;
-
-    const existingUsername = usernameRows as mysql.RowDataPacket[];
-    if (existingUsername?.length > 0) {
-      return NextResponse.json(
-        { message: 'This username is already taken' },
         { status: 400 }
       );
     }
@@ -128,16 +122,22 @@ export async function POST(request: Request) {
       { status: 201 }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error & { code?: string };
     // Get request data from the outer scope
     const requestData = (() => {
       try {
-        const { username, email, mobile } = request.body ? 
-          JSON.parse(JSON.stringify(request.body)) : {};
+        const body = request.body ? JSON.parse(JSON.stringify(request.body)) : {};
+        const { username, email, mobile } = body as { 
+          username?: string; 
+          email?: string; 
+          mobile?: string | null;
+          password?: string;
+        };
         return {
           username,
           email,
-          hasPassword: !!(request.body && 'password' in request.body),
+          hasPassword: 'password' in body,
           mobile
         };
       } catch (e) {
@@ -147,54 +147,59 @@ export async function POST(request: Request) {
     
     // Log detailed error information
     const errorDetails = {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sql: error.sql,
-      sqlMessage: error.sqlMessage,
-      sqlState: error.sqlState,
-      stack: error.stack,
-      requestData
+      message: err.message,
+      code: err.code,
+      name: err.name,
+      stack: err.stack,
+      requestData,
+      isEmailError: err.code === 'ER_DUP_ENTRY' && err.message?.includes('email'),
+      isUsernameError: err.code === 'ER_DUP_ENTRY' && err.message?.includes('username'),
+      isMobileError: err.code === 'ER_DUP_ENTRY' && err.message?.includes('mobile'),
+      isValidationError: err.name === 'ValidationError',
+      isDatabaseError: err.code && typeof err.code === 'string' && err.code.startsWith('ER_'),
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      nodeVersion: process.version,
+      os: process.platform,
+      memoryUsage: process.memoryUsage(),
+      uptime: process.uptime()
     };
-    
-    console.error('🔴 Signup Error:', JSON.stringify(errorDetails, null, 2));
-    
-    // Handle specific MySQL errors
-    let errorMessage = 'An error occurred during signup';
-    let statusCode = 500;
-    
-    if (error.code === 'ER_DUP_ENTRY') {
-      if (error.sqlMessage?.includes('users_email_unique')) {
-        errorMessage = 'A user with this email already exists';
-      } else if (error.sqlMessage?.includes('users_username_unique')) {
-        errorMessage = 'This username is already taken';
-      } else {
-        errorMessage = 'This email or username is already registered';
+
+    console.error('Error creating user:', errorDetails);
+
+    // Return appropriate error response
+    if (err.code === 'ER_DUP_ENTRY') {
+      if (err.message?.includes('email')) {
+        return NextResponse.json(
+          { success: false, message: 'Email already in use' },
+          { status: 400 }
+        );
+      } else if (err.message?.includes('username')) {
+        return NextResponse.json(
+          { success: false, message: 'Username already taken' },
+          { status: 400 }
+        );
+      } else if (err.message?.includes('mobile')) {
+        return NextResponse.json(
+          { success: false, message: 'Mobile number already in use' },
+          { status: 400 }
+        );
       }
-      statusCode = 400;
-    } else if (error.code === 'ER_NO_SUCH_TABLE') {
-      errorMessage = 'Database configuration error. Please contact support.';
-    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      errorMessage = 'Database access denied. Please check your database credentials.';
-    } else if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'Could not connect to the database. Please try again later.';
     }
-    
-    // Prepare response with appropriate error details
-    const response = {
-      success: false,
-      message: errorMessage,
-      // Only include detailed error info in development
-      ...(process.env.NODE_ENV === 'development' ? {
-        error: error.message,
-        code: error.code,
-        ...(error.sqlMessage && { sqlMessage: error.sqlMessage })
-      } : {})
+
+    // For other types of errors, return a generic error message
+    const errorResponse = {
+      success: false, 
+      message: 'Failed to create user',
+      ...(process.env.NODE_ENV === 'development' && {
+        error: err.message,
+        code: err.code,
+        ...('sqlMessage' in err && { 
+          sqlMessage: (err as { sqlMessage?: string }).sqlMessage 
+        })
+      })
     };
     
-    return new NextResponse(JSON.stringify(response), {
-      status: statusCode,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

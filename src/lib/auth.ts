@@ -5,19 +5,22 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt';
 
 declare module 'next-auth' {
-  interface Session extends DefaultSession {
+  interface Session {
     user: {
       id: string;
       accessToken: string;
-    } & DefaultSession['user'];
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
   }
 
   interface User {
     id: string;
+    accessToken: string;
     name?: string | null;
     email?: string | null;
     image?: string | null;
-    accessToken: string;
   }
 }
 

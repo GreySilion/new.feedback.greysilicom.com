@@ -1,30 +1,38 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import mysql from 'mysql2/promise';
+import type { PoolConnection, RowDataPacket, FieldPacket } from 'mysql2/promise';
+
+interface DatabaseError extends Error {
+  code?: string;
+  sqlMessage?: string;
+  sqlState?: string;
+  errno?: number;
+  sql?: string;
+}
 
 export async function GET() {
   try {
     const connection = await pool.getConnection();
     
     try {
-      // Check if users table exists
-      const [tables] = await connection.query(
+      // Check if users table exists with proper typing
+      const [tables] = await connection.query<RowDataPacket[]>(
         "SHOW TABLES LIKE 'users'"
-      ) as [mysql.RowDataPacket[], mysql.FieldPacket[]];
+      ) as [RowDataPacket[], FieldPacket[]];
       
       if (tables.length === 0) {
         return NextResponse.json(
           { 
             success: false, 
             message: 'Users table does not exist',
-            tables: await connection.query('SHOW TABLES')
+            tables: await connection.query<RowDataPacket[]>('SHOW TABLES')
           },
           { status: 404 }
         );
       }
       
-      // Get table structure
-      const [columns] = await connection.query('DESCRIBE users');
+      // Get table structure with proper typing
+      const [columns] = await connection.query<RowDataPacket[]>('DESCRIBE users');
       
       return NextResponse.json({
         success: true,
@@ -36,24 +44,29 @@ export async function GET() {
       connection.release();
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const dbError = error as DatabaseError;
+    
     console.error('Database test error:', {
-      message: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
-      sqlState: error.sqlState,
-      stack: error.stack
+      message: dbError.message,
+      code: dbError.code,
+      sqlMessage: dbError.sqlMessage,
+      sqlState: dbError.sqlState,
+      ...(process.env.NODE_ENV === 'development' && { stack: dbError.stack })
     });
     
     return NextResponse.json(
       { 
         success: false, 
         message: 'Database connection failed',
-        error: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          code: error.code,
-          sqlMessage: error.sqlMessage
-        } : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          error: {
+            message: dbError.message,
+            code: dbError.code,
+            sqlMessage: dbError.sqlMessage,
+            ...(dbError.sql && { sql: dbError.sql })
+          }
+        })
       },
       { status: 500 }
     );

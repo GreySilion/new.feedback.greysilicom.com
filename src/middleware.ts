@@ -2,13 +2,28 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
-  const { pathname } = request.nextUrl;
+// List of routes that don't require authentication
+const publicRoutes = ['/login', '/register', '/forgot-password', '/', '/api/auth'];
 
-  // Public routes that don't require authentication
-  const publicRoutes = ['/auth/login', '/register', '/forgot-password', '/'];
+// List of routes that require a selected company
+const companyRequiredRoutes = ['/dashboard'];
+
+// List of routes where company selection is not needed
+const companyExcludedRoutes = ['/companies', '/api/companies'];
+
+export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+  const token = request.cookies.get('next-auth.session-token')?.value || 
+               request.cookies.get('__Secure-next-auth.session-token')?.value;
+
+  // Check if the current route is public
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  
+  // Check if the current route requires a company to be selected
+  const isCompanyRequired = companyRequiredRoutes.some(route => pathname.startsWith(route));
+  
+  // Check if the current route is excluded from company selection check
+  const isCompanyExcluded = companyExcludedRoutes.some(route => pathname.startsWith(route));
 
   // If it's a public route, allow access
   if (isPublicRoute) {
@@ -17,22 +32,40 @@ export async function middleware(request: NextRequest) {
 
   // If no token and trying to access protected route, redirect to login
   if (!token) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('from', pathname);
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   try {
     // Verify the JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || '');
+    const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || '');
     await jwtVerify(token, secret);
     
-    // If token is valid, continue to the requested page
+    // If user is trying to access the root, redirect to companies page
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL('/companies', request.url));
+    }
+    
+    // If company is required but not selected, and not on an excluded route
+    const selectedCompanyId = request.cookies.get('selectedCompanyId')?.value;
+    if (isCompanyRequired && !selectedCompanyId && !isCompanyExcluded) {
+      return NextResponse.redirect(new URL('/companies', request.url));
+    }
+    
+    // If user is on the companies page but has a selected company, redirect to dashboard
+    if (pathname === '/companies' && selectedCompanyId && !searchParams.get('force')) {
+      return NextResponse.redirect(new URL(`/dashboard?companyId=${selectedCompanyId}`, request.url));
+    }
+    
+    // Continue to the requested page
     return NextResponse.next();
   } catch (error) {
-    // If token is invalid, clear the cookie and redirect to login
+    console.error('Authentication error:', error);
+    // If token is invalid, clear the auth cookie and redirect to login
     const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.delete('auth_token');
+    response.cookies.delete('next-auth.session-token');
+    response.cookies.delete('__Secure-next-auth.session-token');
     return response;
   }
 }
@@ -41,11 +74,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * - api (API routes) - except /api/auth
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/(?!auth).*).*)',
   ],
 };

@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React from 'react';
 
 interface DashboardChartsProps {
   stats: {
@@ -18,15 +19,34 @@ const COLORS = {
   feedback: '#8B5CF6', // violet-500
 };
 
-const RADIAN = Math.PI / 180;
+// Type for the pie chart label props
+type PieLabelProps = {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+  percent: number;
+  index: number;
+};
 
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+// Simple label renderer for the pie chart
+const renderCustomizedLabel = (props: PieLabelProps) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+  const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
   return (
-    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-medium">
+    <text 
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="text-xs font-medium"
+    >
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   );
@@ -56,15 +76,31 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={renderCustomizedLabel}
+                label={(props) => {
+                  // Ensure all required props are present and properly typed
+                  const labelProps: PieLabelProps = {
+                    cx: Number(props.cx) || 0,
+                    cy: Number(props.cy) || 0,
+                    midAngle: Number(props.midAngle) || 0,
+                    innerRadius: Number(props.innerRadius) || 0,
+                    outerRadius: Number(props.outerRadius) || 0,
+                    percent: Number(props.percent) || 0,
+                    index: props.index || 0,
+                  };
+                  return renderCustomizedLabel(labelProps);
+                }}
                 outerRadius={80}
-                innerRadius={40}
-                fill="#8884d8"
                 dataKey="value"
                 className="focus:outline-none"
               >
                 {responseData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color} 
+                    className="outline-none"
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
                 ))}
               </Pie>
               <Tooltip 

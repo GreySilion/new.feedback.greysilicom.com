@@ -1,65 +1,126 @@
 import { NextResponse } from 'next/server';
-import mysql from 'mysql2/promise';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { RowDataPacket, FieldPacket, ResultSetHeader } from 'mysql2/promise';
+import pool from '@/lib/db';
 
-// Database configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'S3cr3t_3',
-  database: process.env.DB_NAME || 'Grey_silicon_feedback_dump',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+type QueryResult<T = RowDataPacket> = T[] & { affectedRows?: number; insertId?: number };
+
+interface ReviewRow extends RowDataPacket {
+  id: number;
+  uid: string;
+  rating: number | null;
+  review: string | null;
+  status: string | null;
+  name: string | null;
+  company_id: number | null;
+  user_id: number | null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface UserRow extends RowDataPacket {
+  name?: string;
+}
+
+interface Feedback extends RowDataPacket {
+  id: number;
+  uid: string;
+  rating: number;
+  review: string | null;
+  status: string;
+  created_at: Date;
+  updated_at: Date;
+  user_id: number;
+  company_id: number;
+  completed_at: Date | null;
+  userName?: string;
+  companyName?: string;
+}
+
+type FeedbackWithRelations = Feedback & {
+  userName?: string;
+  companyName?: string;
 };
 
-// Helper function to create a database connection
-async function getConnection() {
-  return await mysql.createConnection(dbConfig);
-}
 
 export async function GET(
   request: Request,
   { params }: { params: { uid: string } }
 ) {
-  const { uid } = params;
-  let connection;
-
   try {
-    if (!uid) {
-      return NextResponse.json(
-        { error: 'UID is required' },
-        { status: 400 }
-      );
-    }
-
-    connection = await getConnection();
+    const { uid } = params;
     
-    const [rows] = await connection.execute(
-      'SELECT * FROM reviews WHERE uid = ?',
-      [uid]
-    ) as any[];
+    // Get a connection from the pool
+    const connection = await pool.getConnection();
+    
+    try {
+      // Find the feedback by UID
+      // First, get the feedback with just the basic data
+      // First, get the review details using the UID
+      const [reviewRows] = await connection.query<RowDataPacket[]>(
+        'SELECT id, user_id, company_id FROM reviews WHERE uid = ?',
+        [uid]
+      ) as [RowDataPacket[], any];
+      
+      if (!reviewRows || reviewRows.length === 0) {
+        return NextResponse.json(
+          { error: 'Review not found' },
+          { status: 404 }
+        );
+      }
+      
+      const review = reviewRows[0];
+      
+      // Get the full review details with company info
+      const [reviewWithDetails] = await connection.query<QueryResult<FeedbackWithRelations>>(
+        `SELECT r.*, c.name as companyName, r.name as userName 
+         FROM reviews r
+         LEFT JOIN companies c ON r.company_id = c.id
+         WHERE r.id = ?`, 
+        [review.id]
+      ) as [QueryResult<FeedbackWithRelations>, FieldPacket[]];
+      
+      const feedback = reviewWithDetails[0];
 
-    if (!rows || rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Feedback not found' },
-        { status: 404 }
-      );
+      if (!feedback) {
+        return NextResponse.json(
+          { error: 'Feedback not found' },
+          { status: 404 }
+        );
+      }
+
+      // Return the feedback data
+      if (!feedback) {
+        return NextResponse.json(
+          { error: 'Feedback not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        id: feedback.id,
+        uid: feedback.uid,
+        rating: feedback.rating,
+        review: feedback.review,
+        status: feedback.status,
+        companyName: feedback.companyName,
+        name: feedback.userName,
+        createdAt: feedback.created_at,
+        updatedAt: feedback.updated_at
+      });
+    } finally {
+      // Release the connection back to the pool
+      connection.release();
     }
-
-    const feedback = rows[0];
-    return NextResponse.json(feedback);
-
   } catch (error) {
-    console.error('Error fetching feedback:', error);
+    console.error('Error in GET /api/feedback/[uid]:', error);
     return NextResponse.json(
       { 
-        error: 'Failed to fetch feedback',
-        ...(process.env.NODE_ENV === 'development' && { details: (error as Error).message })
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       },
       { status: 500 }
     );
-  } finally {
-    if (connection) await connection.end();
   }
 }
 
@@ -67,105 +128,198 @@ export async function PATCH(
   request: Request,
   { params }: { params: { uid: string } }
 ) {
-  const { uid } = params;
-  let connection;
-  console.log('PATCH request received for UID:', uid);
-
+  const connection = await pool.getConnection();
+  
   try {
-    if (!uid) {
-      console.error('No UID provided');
-      return NextResponse.json(
-        { error: 'UID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Parse the request body
-    let body;
-    try {
-      body = await request.json();
-      console.log('Request body:', body);
-    } catch (e) {
-      console.error('Error parsing request body:', e);
-      return NextResponse.json(
-        { error: 'Invalid JSON body' },
-        { status: 400 }
-      );
-    }
-
-    const { rating, review } = body || {};
+    const { uid } = params;
+    const { rating, review } = await request.json();
     
-    if (rating === undefined) {
-      console.error('No rating provided');
-      return NextResponse.json(
-        { error: 'Rating is required' },
-        { status: 400 }
-      );
-    }
-
-    connection = await getConnection();
-    
+    // Ensure review is a string or null
+    const reviewText = typeof review === 'string' ? review.trim() : null;
     try {
-      // Check if the record exists
-      const [existing] = await connection.execute(
-        'SELECT id FROM reviews WHERE uid = ?',
+      console.log(`Looking up review with UID: ${uid}`);
+      
+      // First, get the review details using the UID
+      const [reviewRows] = await connection.query<ReviewRow[]>(
+        'SELECT * FROM reviews WHERE uid = ?',
         [uid]
-      ) as any[];
+      );
+      
+      console.log('Review rows from database:', reviewRows);
 
-      if (!existing || existing.length === 0) {
-        console.error('No record found for UID:', uid);
+      if (!reviewRows || reviewRows.length === 0) {
+        const error = `No review found with UID: ${uid}`;
+        console.error(error);
         return NextResponse.json(
-          { error: 'Feedback record not found' },
+          { error: 'Review not found', details: error },
           { status: 404 }
         );
       }
+      
+      const reviewData = reviewRows[0];
+      console.log('Found review:', reviewData);
 
-      // Update the record
-      await connection.execute(
-        'UPDATE reviews SET rating = ?, review = ?, status = "replied", updated_at = NOW() WHERE uid = ?',
-        [rating, review || null, uid]
-      );
+      // Start a transaction
+      await connection.beginTransaction();
+      
+      try {
+        console.log(`Updating review ${reviewData.id} with rating: ${rating}, review: ${reviewText}`);
+        
+        // First, update the review with the new data
+        // Only update status to 1 (replied) if it's not already set
+        // Otherwise, keep the existing status (0 for pending)
+        const [updateResult] = await connection.execute<ResultSetHeader>(
+          'UPDATE reviews SET rating = ?, review = ?, status = COALESCE(status, 0), updated_at = NOW() WHERE id = ?',
+          [rating, reviewText, reviewData.id]
+        ) as [ResultSetHeader, FieldPacket[]];
+        
+        console.log('Update result:', updateResult);
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('No rows were updated');
+        }
 
-      // Get the updated record
-      const [updatedRows] = await connection.execute(
-        'SELECT * FROM reviews WHERE uid = ?',
+        // Commit the transaction
+        await connection.commit();
+        
+        // Get the updated review with all its data
+        const [updatedRows] = await connection.query<ReviewRow[]>(
+          'SELECT * FROM reviews WHERE id = ?',
+          [reviewData.id]
+        );
+        
+        const updatedReview = updatedRows[0];
+        console.log('Updated review from database:', updatedReview);
+        
+        // Commit the transaction
+        await connection.commit();
+        
+        // Get company name if available
+        let companyName = null;
+        if (updatedReview.company_id) {
+          const [companyRows] = await connection.query<RowDataPacket[]>(
+            'SELECT name FROM companies WHERE id = ?',
+            [updatedReview.company_id]
+          ) as [RowDataPacket[], any];
+          companyName = companyRows[0]?.name || null;
+        }
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: updatedReview.id,
+            uid: updatedReview.uid,
+            rating: updatedReview.rating,
+            review: updatedReview.review,
+            status: updatedReview.status,
+            userName: updatedReview.name,
+            companyName: companyName,
+            message: 'Review updated successfully'
+          }
+        });
+        
+      } catch (error) {
+        await connection.rollback();
+        console.error('Error updating review:', error);
+        throw error;
+      }
+
+      // Get the updated review with company data
+      const [updatedRows] = await connection.query<RowDataPacket[]>(
+        `SELECT r.*, c.name as companyName, r.name as userName
+         FROM reviews r
+         LEFT JOIN companies c ON r.company_id = c.id
+         WHERE r.uid = ?`,
         [uid]
-      ) as any[];
+      ) as [RowDataPacket[], any];
+      
+      const updatedFeedback = updatedRows[0] as FeedbackWithRelations;
+      
+      // If we have a result, get the user's name separately
+      if (updatedFeedback && updatedFeedback.user_id) {
+        const [userRows] = await connection.query<RowDataPacket[]>(
+          'SELECT name FROM users WHERE id = ?',
+          [updatedFeedback.user_id]
+        ) as [RowDataPacket[], any];
+        
+        if (userRows && userRows.length > 0) {
+          updatedFeedback.userName = userRows[0].name as string;
+        }
+      }
 
-      console.log('Successfully updated feedback for UID:', uid);
+      // Commit the transaction
+      await connection.commit();
+
+      if (!updatedFeedback) {
+        return NextResponse.json(
+          { error: 'Failed to fetch updated feedback' },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json({
-        success: true,
-        message: 'Feedback updated successfully',
-        data: updatedRows[0]
+        id: updatedFeedback.id,
+        uid: updatedFeedback.uid,
+        rating: updatedFeedback.rating,
+        review: updatedFeedback.review,
+        status: updatedFeedback.status,
+        companyName: updatedFeedback.companyName,
+        name: updatedFeedback.userName,
+        createdAt: updatedFeedback.created_at,
+        updatedAt: updatedFeedback.updated_at
       });
-
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      return NextResponse.json(
-        { 
-          error: 'Database error',
-          ...(process.env.NODE_ENV === 'development' && { details: (dbError as Error).message })
-        },
-        { status: 500 }
-      );
+    } catch (error) {
+      // Rollback the transaction in case of error
+      await connection.rollback();
+      console.error('Error in PATCH /api/feedback/[uid] transaction:', error);
+      throw error;
+    } finally {
+      // Release the connection back to the pool
+      connection.release();
     }
-
   } catch (error) {
-    console.error('Unexpected error in PATCH handler:', error);
+    console.error('Error in PATCH /api/feedback/[uid]:', error);
+    
+    if (error instanceof Error && 'code' in error) {
+      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+        return NextResponse.json(
+          { 
+            error: 'Referenced user or company not found',
+            details: error.message
+          },
+          { status: 404 }
+        );
+      } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+        return NextResponse.json(
+          { 
+            error: 'Database access denied',
+            message: 'Please check your database credentials',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          },
+          { status: 500 }
+        );
+      } else if (error.code === 'ECONNREFUSED') {
+        return NextResponse.json(
+          { 
+            error: 'Database connection refused',
+            message: 'Could not connect to the database server',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          },
+          { status: 500 }
+        );
+      }
+    }
+    
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { details: (error as Error).message })
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
+        ...(process.env.NODE_ENV === 'development' && {
+          stack: error instanceof Error ? error.stack : undefined,
+          raw: JSON.stringify(error, Object.getOwnPropertyNames(error))
+        })
       },
       { status: 500 }
     );
-  } finally {
-    if (connection) {
-      try {
-        await connection.end();
-      } catch (e) {
-        console.error('Error closing database connection:', e);
-      }
-    }
   }
 }
