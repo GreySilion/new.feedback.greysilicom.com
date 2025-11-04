@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import type { RowDataPacket, FieldPacket, ResultSetHeader } from 'mysql2/promise';
 
-interface QueryResult extends Array<any> {
-  [key: string]: any;
+interface QueryResult extends RowDataPacket {
   result?: number;
+  TABLE_NAME?: string;
+}
+
+interface TestResult extends RowDataPacket {
+  success: boolean;
+  connectionTest: string;
+  database: string;
+  feedbackTableExists: boolean;
+  queryTest?: number;
+  error?: string;
+  details?: unknown;
 }
 
 interface DatabaseError extends Error {
@@ -11,6 +22,7 @@ interface DatabaseError extends Error {
   errno?: number;
   sqlState?: string;
   sqlMessage?: string;
+  sql?: string;
 }
 
 export async function GET() {
@@ -28,7 +40,7 @@ export async function GET() {
          FROM INFORMATION_SCHEMA.TABLES 
          WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'feedback'`,
         [process.env.DB_NAME || 'new_greysilicon_feedback']
-      ) as [QueryResult[], any];
+      ) as [QueryResult[], FieldPacket[]];
       
       // Check if the feedback table exists
       const feedbackTableExists = Array.isArray(tables) && tables.length > 0;
@@ -47,24 +59,30 @@ export async function GET() {
     } finally {
       connection.release();
     }
-  } catch (err) {
-    const error = err as DatabaseError;
-    console.error('Database connection test failed:', error);
+  } catch (error: unknown) {
+    console.error('Database test failed:', error);
+    const errorResponse: Partial<DatabaseError> = {};
     
-    const errorResponse = {
-      success: false,
-      error: 'Database connection failed',
-      message: error.message || 'Unknown error',
-      ...(process.env.NODE_ENV === 'development' && {
-        stack: error.stack,
-        code: error.code,
-        errno: error.errno,
-        sqlState: error.sqlState,
-        sqlMessage: error.sqlMessage
-      })
-    };
+    if (error && typeof error === 'object') {
+      const dbError = error as DatabaseError;
+      errorResponse.message = dbError.message || 'Database connection failed';
+      errorResponse.code = dbError.code;
+      errorResponse.sqlState = dbError.sqlState;
+      errorResponse.sqlMessage = dbError.sqlMessage;
+      
+      if (process.env.NODE_ENV === 'development') {
+        errorResponse.sql = dbError.sql;
+      }
+    }
     
     console.error('Error response:', errorResponse);
-    return NextResponse.json(errorResponse, { status: 500 });
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Database test failed',
+        details: process.env.NODE_ENV === 'development' ? errorResponse : undefined
+      },
+      { status: 500 }
+    );
   }
 }
