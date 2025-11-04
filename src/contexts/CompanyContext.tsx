@@ -8,7 +8,8 @@ export interface Company {
   name: string;
   status?: string;
   created_at?: string;
-  [key: string]: any; // For any additional properties that might come from the API
+  // Additional properties that might come from the API
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 interface CompanyContextType {

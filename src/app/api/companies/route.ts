@@ -33,7 +33,7 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-export async function GET(request: Request): Promise<NextResponse<ApiResponse<Company[]>>> {
+export async function GET(_request: Request): Promise<NextResponse<ApiResponse<Company[]>>> {
   try {
     const session = await getServerSession(authOptions);
     

@@ -229,7 +229,7 @@ export default function CompaniesPage() {
               <Building2 className="w-full h-full" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-1">No companies found</h3>
-            <p className="text-gray-500 mb-6">You don't have any companies yet.</p>
+            <p className="text-gray-500 mb-6">You don&apos;t have any companies yet.</p>
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
               <Plus className="mr-2 h-4 w-4" /> Add Company
             </Button>
