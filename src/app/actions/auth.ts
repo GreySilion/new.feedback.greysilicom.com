@@ -3,13 +3,14 @@
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface UserPayload {
   userId: number;
   email: string;
   username: string;
   name?: string;
-  iat: number;
-  exp: number;
+  role?: string;
+  companyId?: number;
 }
 
 export async function getCurrentUser() {

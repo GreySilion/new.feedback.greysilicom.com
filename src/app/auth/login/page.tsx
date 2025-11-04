@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -54,7 +54,7 @@ export default function LoginPage() {
         throw new Error(result.message || 'Login failed');
       }
 
-      // Redirect to the original page or dashboard on successful login
+      // Redirect to the original page on successful login
       router.push(redirectTo);
       router.refresh();
     } catch (err) {
@@ -188,7 +188,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
               Sign up
             </a>

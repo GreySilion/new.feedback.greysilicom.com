@@ -2,6 +2,7 @@ import type { NextAuthOptions, User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import pool from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import type { RowDataPacket, FieldPacket } from 'mysql2';
 
 // Extend the built-in session and user types
 declare module 'next-auth' {
@@ -38,7 +39,12 @@ interface UserRow {
   name: string;
   email: string;
   password: string;
-  [key: string]: any; // Allow additional properties
+  // Add other known properties here
+  role?: string;
+  created_at?: Date;
+  updated_at?: Date;
+  // For any other dynamic properties
+  [key: string]: unknown;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -56,12 +62,12 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Find user in database
-          const [rows] = await pool.query(
+          const [rows] = await pool.query<RowDataPacket[]>(
             'SELECT * FROM users WHERE email = ?',
             [credentials.email]
-          ) as any; // Type assertion to bypass type checking for now
+          ) as [RowDataPacket[], FieldPacket[]];
 
-          const user = rows[0];
+          const user = rows[0] as UserRow | undefined;
           
           if (!user) {
             throw new Error('No user found with this email');
