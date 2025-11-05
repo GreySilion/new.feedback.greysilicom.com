@@ -13,7 +13,7 @@ interface ReviewRow extends RowDataPacket {
   status: string | null;
   name: string | null;
   company_id: number | null;
-  user_id: number | null;
+  owner_id: number | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,7 +29,7 @@ interface Feedback extends RowDataPacket {
   status: string;
   created_at: Date;
   updated_at: Date;
-  user_id: number;
+  owner_id: number;
   company_id: number;
   completed_at: Date | null;
   userName?: string;
@@ -57,7 +57,7 @@ export async function GET(
       // First, get the feedback with just the basic data
       // First, get the review details using the UID
       const [reviewRows] = await connection.query<RowDataPacket[]>(
-        'SELECT id, user_id, company_id FROM reviews WHERE uid = ?',
+        'SELECT id, company_id FROM reviews WHERE uid = ?',
         [uid]
       ) as [RowDataPacket[], any];
       
@@ -70,9 +70,9 @@ export async function GET(
       
       const review = reviewRows[0];
       
-      // Get the full review details with company info
+      // Get the full review details with company info and customer name
       const [reviewWithDetails] = await connection.query<QueryResult<FeedbackWithRelations>>(
-        `SELECT r.*, c.name as companyName, r.name as userName 
+        `SELECT r.*, c.name as companyName, r.name as customerName 
          FROM reviews r
          LEFT JOIN companies c ON r.company_id = c.id
          WHERE r.id = ?`, 
@@ -103,7 +103,7 @@ export async function GET(
         review: feedback.review,
         status: feedback.status,
         companyName: feedback.companyName,
-        name: feedback.userName,
+        name: feedback.customerName || feedback.name,
         createdAt: feedback.created_at,
         updatedAt: feedback.updated_at
       });
@@ -132,10 +132,11 @@ export async function PATCH(
   
   try {
     const { uid } = params;
-    const { rating, review } = await request.json();
+    const { rating, review, reply } = await request.json();
     
-    // Ensure review is a string or null
+    // Ensure review and reply are strings or null
     const reviewText = typeof review === 'string' ? review.trim() : null;
+    const replyText = typeof reply === 'string' ? reply.trim() : null;
     try {
       console.log(`Looking up review with UID: ${uid}`);
       
@@ -165,12 +166,23 @@ export async function PATCH(
       try {
         console.log(`Updating review ${reviewData.id} with rating: ${rating}, review: ${reviewText}`);
         
-        // First, update the review with the new data
-        // Only update status to 1 (replied) if it's not already set
-        // Otherwise, keep the existing status (0 for pending)
+        // Update the review with the new data and handle the reply
+        let updateQuery: string;
+        let queryParams: any[];
+
+        if (replyText) {
+          // If there's a reply, update the reply column and set status to 'replied'
+          updateQuery = 'UPDATE reviews SET rating = COALESCE(?, rating), review = COALESCE(?, review), reply = ?, status = \'replied\', replied_at = NOW(), updated_at = NOW() WHERE id = ?';
+          queryParams = [rating, reviewText, replyText, reviewData.id];
+        } else {
+          // If no reply, just update the rating and review
+          updateQuery = 'UPDATE reviews SET rating = COALESCE(?, rating), review = COALESCE(?, review), updated_at = NOW() WHERE id = ?';
+          queryParams = [rating, reviewText, reviewData.id];
+        }
+
         const [updateResult] = await connection.execute<ResultSetHeader>(
-          'UPDATE reviews SET rating = ?, review = ?, status = COALESCE(status, 0), updated_at = NOW() WHERE id = ?',
-          [rating, reviewText, reviewData.id]
+          updateQuery,
+          queryParams
         ) as [ResultSetHeader, FieldPacket[]];
         
         console.log('Update result:', updateResult);
@@ -211,7 +223,9 @@ export async function PATCH(
             uid: updatedReview.uid,
             rating: updatedReview.rating,
             review: updatedReview.review,
+            reply: updatedReview.reply,
             status: updatedReview.status,
+            repliedAt: updatedReview.replied_at,
             userName: updatedReview.name,
             companyName: companyName,
             message: 'Review updated successfully'
