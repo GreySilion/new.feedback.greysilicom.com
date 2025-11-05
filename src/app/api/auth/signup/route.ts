@@ -88,23 +88,27 @@ export async function POST(request: Request) {
         username,
         email,
         password,
+        name,
         firstname,
         lastname,
         mobile,
         is_verified,
         status,
+        role,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         username,          // username
         email,             // email
         hashedPassword,    // password
+        username,          // name (using username as name)
         username,          // firstname (using username as firstname)
         username,          // lastname (using username as lastname)
         mobile || null,    // mobile (can be null)
         0,                 // is_verified (0 = false)
         1,                 // status (1 = active)
+        'USER',            // role (default to 'USER')
         currentTimestamp,  // created_at
         currentTimestamp   // updated_at
       ]
@@ -112,12 +116,14 @@ export async function POST(request: Request) {
 
     const insertResult = result as mysql.ResultSetHeader;
     
-    // Return success response without sensitive data
+    // Return success response with redirect URL and message
     return NextResponse.json(
       { 
         success: true,
-        message: 'User created successfully',
-        userId: insertResult.insertId 
+        message: 'Account created successfully! You can now log in.',
+        userId: insertResult.insertId,
+        redirect: '/auth/login',
+        showMessage: true
       },
       { status: 201 }
     );

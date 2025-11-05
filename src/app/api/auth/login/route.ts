@@ -131,8 +131,11 @@ export async function POST(request: Request) {
         password, 
         status, 
         is_verified, 
+        name,
         firstname,
         lastname,
+        mobile,
+        role,
         created_at 
       FROM users 
       WHERE email = ?`,
