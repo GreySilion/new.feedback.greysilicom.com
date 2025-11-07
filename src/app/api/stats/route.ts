@@ -4,6 +4,8 @@ import { authOptions } from '../auth/config';
 import pool from '@/lib/db';
 import type { RowDataPacket } from 'mysql2/promise';
 
+export const dynamic = 'force-dynamic';
+
 interface StatsResponse {
   totalReviews: number;
   averageRating: string;

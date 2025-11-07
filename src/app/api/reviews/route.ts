@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 interface Review extends RowDataPacket {
   id: string;
   title: string;

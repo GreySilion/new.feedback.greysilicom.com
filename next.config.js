@@ -1,20 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use standalone output for better performance
+  // ✅ Use standalone build (for Webuzo + Apache deployment)
   output: 'standalone',
-  
-  // Remove trailing slash to prevent routing issues
+
+  // ✅ Disable trailing slashes to avoid route mismatches
   trailingSlash: false,
-  
-  // Enable React strict mode
+
+  // ✅ Enable React strict mode for development hygiene
   reactStrictMode: true,
-  
-  // Configure page extensions
+
+  // ✅ File extensions supported for pages and routes
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  
-  // Webpack configuration
-  webpack: (config, { isServer }) => {
-    // Fixes npm packages that depend on `node:` protocol
+
+  // ✅ Webpack configuration (prevents server build errors)
+  webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -27,43 +26,22 @@ const nextConfig = {
       https: false,
       zlib: false,
     };
-    
     return config;
   },
-  
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
-  // TypeScript configuration
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
-  // Enable server components
-  experimental: {
-    serverActions: true,
-  },
-  
-  // Security headers
+
+  // ✅ Skip lint and TS errors during production build
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+
+  // ✅ Security headers
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
         ],
       },
     ];
