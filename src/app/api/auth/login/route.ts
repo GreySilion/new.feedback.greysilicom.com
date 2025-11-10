@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { SignJWT } from 'jose';
 import { z } from 'zod';
 import pool from '@/lib/db';
-import { compare } from 'bcryptjs';
+import bcrypt, { compare } from 'bcryptjs';
 import mysql from 'mysql2/promise';
 
 // Enable SQL logging in development
@@ -131,11 +131,10 @@ export async function POST(request: Request) {
         password, 
         status, 
         is_verified, 
-        name,
+        username,
         firstname,
         lastname,
         mobile,
-        role,
         created_at 
       FROM users 
       WHERE email = ?`,
@@ -171,9 +170,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify password
-    const isPasswordValid = await compare(password, user.password);
+    // Verify password - handle both $2a$ and $2y$ bcrypt formats
+    let isPasswordValid;
+    let hashToCompare = user.password;
+    
+    if (debug) {
+      console.log('Password verification:');
+      console.log('Password hash from DB:', hashToCompare);
+      console.log('Hash starts with $2y$:', hashToCompare.startsWith('$2y$'));
+    }
+
+    if (hashToCompare.startsWith('$2y$')) {
+      // Convert $2y$ to $2a$ format for bcryptjs
+      hashToCompare = '$2a$' + hashToCompare.substring(4);
+      if (debug) {
+        console.log('Converted hash to $2a$ format:', hashToCompare);
+      }
+    }
+
+    isPasswordValid = await compare(password, hashToCompare);
+    
+    if (debug) {
+      console.log('Password comparison result:', isPasswordValid);
+    }
+    
     if (!isPasswordValid) {
+      if (debug) {
+        console.log('Password verification failed');
+        // For debugging: Generate a hash of the provided password to check if it matches
+        const salt = await bcrypt.genSalt(10);
+        const newHash = await bcrypt.hash(password, salt);
+        console.log('New hash of provided password:', newHash);
+      }
       return errorResponse('Invalid email or password', 401);
     }
 

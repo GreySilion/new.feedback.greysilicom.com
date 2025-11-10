@@ -6,7 +6,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 interface Company extends RowDataPacket {
   id: number;
-  owner_id: number;
+  user_id: number;
   category_id?: number | null;
   name: string;
   image?: string | null;
@@ -60,7 +60,7 @@ export async function GET(_request: Request): Promise<NextResponse<ApiResponse<C
     const [rows] = await pool.query<Company[]>(
       `SELECT 
         id, 
-        owner_id,
+        user_id,
         category_id,
         name,
         image,
@@ -91,7 +91,7 @@ export async function GET(_request: Request): Promise<NextResponse<ApiResponse<C
       FROM 
         companies 
       WHERE 
-        owner_id = ? 
+        user_id = ? 
       ORDER BY 
         name ASC`,
       [userId]
@@ -222,7 +222,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<C
       
       const companyData = {
         name: name.trim(),
-        owner_id: user.id,
+        user_id: user.id,
         status: 'PUBLISHED',
         company_status: 1,
         description: description?.trim() || '',
