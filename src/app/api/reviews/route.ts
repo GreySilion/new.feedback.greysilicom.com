@@ -44,12 +44,16 @@ export async function GET(request: Request) {
     const connection = await pool.getConnection();
 
     try {
-      // Build dynamic query
+      console.log('Building query with params:', { userId, companyId, status });
+      
+      // Build dynamic query - only get reviews with actual content
       let query = `
         SELECT r.*, c.name as company_name
         FROM reviews r
         JOIN companies c ON r.company_id = c.id
-        WHERE c.owner_id = ?
+        WHERE c.user_id = ?
+        AND r.review IS NOT NULL 
+        AND r.review != ''
       `;
       const queryParams: (string | number)[] = [userId];
 
@@ -58,22 +62,29 @@ export async function GET(request: Request) {
         queryParams.push(companyId);
       }
 
-      if (status && (status === 'pending' || status === 'replied')) {
-        query += ' AND r.status = ?';
-        queryParams.push(status);
+      if (status === 'pending') {
+        query += ' AND (r.reply IS NULL OR r.reply = "")';
+      } else if (status === 'replied') {
+        query += ' AND (r.reply IS NOT NULL AND r.reply != "")';
       }
 
       // Inline LIMIT and OFFSET to avoid binding errors
       query += ` ORDER BY r.created_at DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
 
+      console.log('Executing query:', query);
+      console.log('With params:', queryParams);
+      
       const [reviews] = await connection.query<Review[]>(query, queryParams);
+      console.log(`Found ${reviews.length} reviews`);
 
-      // Count query
+      // Count query - only count reviews with actual content
       let countQuery = `
         SELECT COUNT(*) as total
         FROM reviews r
         JOIN companies c ON r.company_id = c.id
-        WHERE c.owner_id = ?
+        WHERE c.user_id = ?
+        AND r.review IS NOT NULL 
+        AND r.review != ''
       `;
       const countParams: (string | number)[] = [userId];
 
@@ -82,17 +93,23 @@ export async function GET(request: Request) {
         countParams.push(companyId);
       }
 
-      if (status && (status === 'pending' || status === 'replied')) {
-        countQuery += ' AND r.status = ?';
-        countParams.push(status);
+      if (status === 'pending') {
+        countQuery += ' AND (r.reply IS NULL OR r.reply = "")';
+      } else if (status === 'replied') {
+        countQuery += ' AND (r.reply IS NOT NULL AND r.reply != "")';
       }
 
       interface CountResult extends RowDataPacket {
         total: number;
       }
 
+      console.log('Executing count query:', countQuery);
+      console.log('With params:', countParams);
+      
       const [countResult] = await connection.query<CountResult[]>(countQuery, countParams);
       const total = countResult[0]?.total || 0;
+      
+      console.log(`Found ${total} total reviews`);
 
       return NextResponse.json({
         success: true,

@@ -22,6 +22,12 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
   const [loading, setLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<string | number | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1
+  });
   
   const handleReplyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setReplyText(e.target.value);
@@ -43,50 +49,85 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
   
   // Check if a review has been replied to
   const isReplied = (review: Review) => {
-    return review.status === 1;
+    return review.reply != null && review.reply.trim() !== '';
+  };
+  
+  // Format date for display
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      if (!companyId) return;
+  const fetchReviews = async (page = 1) => {
+    if (!companyId) return;
+    
+    setLoading(true);
+    try {
+      console.log(`Fetching page ${page} of reviews for company:`, companyId);
+      const response = await fetch(
+        `/api/reviews?companyId=${companyId}` + 
+        `&page=${page}` + 
+        `&limit=${pagination.limit}` +
+        `&status=${activeTab}`
+      );
       
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/reviews?companyId=${companyId}`);
-        if (!response.ok) throw new Error('Failed to fetch reviews');
+      if (!response.ok) throw new Error('Failed to fetch reviews');
+      
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Process reviews with proper fallback values
+        const validReviews = data.data.map((review: Review) => ({
+          ...review,
+          // Ensure all required fields have proper values
+          name: review.name || 'Anonymous',
+          review: review.review || '',
+          rating: review.rating ?? 0,
+          status: review.status ?? 0,
+          created_at: review.created_at || new Date().toISOString(),
+          updated_at: review.updated_at || null
+        }));
         
-        const data = await response.json();
+        console.log(`Processed ${validReviews.length} reviews`);
+        setReviews(validReviews);
         
-        if (data.success && Array.isArray(data.data)) {
-          // Process and filter reviews
-          const validReviews = data.data
-            .filter((review: Review) => {
-              const hasReview = review.review && review.review.trim() !== '';
-              const hasRating = review.rating !== null;
-              return hasReview || hasRating;
-            })
-            .map((review: Review) => ({
-              ...review,
-              // Ensure all required fields have proper values
-              name: review.name || 'Anonymous',
-              review: review.review || '',
-              rating: review.rating || 0,
-              status: review.status || 0,
-              created_at: review.created_at || new Date().toISOString(),
-              updated_at: review.updated_at || null
-            }));
-          
-          setReviews(validReviews);
+        // Update pagination
+        if (data.pagination) {
+          setPagination({
+            page: data.pagination.page,
+            limit: data.pagination.limit,
+            total: data.pagination.total,
+            totalPages: data.pagination.totalPages
+          });
         }
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Unexpected API response format:', data);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchReviews();
-  }, [companyId]);
+  // Fetch reviews when companyId or activeTab changes
+  useEffect(() => {
+    fetchReviews(1);
+  }, [companyId, activeTab]);
+  
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchReviews(newPage);
+    }
+  };
 
   const handleReply = async (reviewId: string | number) => {
     if (!replyText.trim() || !replyingTo) return;
@@ -184,26 +225,50 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
 
   if (reviews.length === 0) {
     return (
-      <div className="text-center py-8">
-        <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No reviews yet</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Customer reviews will appear here once they're submitted.
-        </p>
+      <div className="space-y-4">
+        <div className="text-center py-8">
+          <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No reviews found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            No reviews were found in the database for this company.
+          </p>
+        </div>
+        
+        {/* Debug information */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-sm text-gray-700 mb-2">Debug Information</h4>
+            <pre className="text-xs bg-white p-3 rounded overflow-auto max-h-60">
+              Company ID: {companyId}
+              
+              {loading ? (
+                'Loading...'
+              ) : (
+                `Found ${reviews.length} reviews in the database.\n\n` +
+                'First few reviews (if any):\n' +
+                JSON.stringify(reviews.slice(0, 3), null, 2)
+              )}
+            </pre>
+          </div>
+        )}
       </div>
     );
   }
 
-  // Filter reviews based on active tab
-  const filteredReviews = reviews.filter(review => {
-    if (activeTab === 'pending') return !isReplied(review);
-    return isReplied(review);
-  });
+  // All reviews from the API are already filtered to have content and match the active tab
+  const filteredReviews = reviews;
 
   return (
     <div className={`space-y-6 ${className}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg font-medium">Customer Reviews</h2>
+        <div>
+          <h2 className="text-lg font-medium">Customer Reviews</h2>
+          {!loading && (
+            <p className="text-sm text-gray-500 mt-1">
+              Showing {filteredReviews.length} of {pagination.total} reviews (page {pagination.page} of {pagination.totalPages})
+            </p>
+          )}
+        </div>
         <div className="inline-flex rounded-md shadow-sm" role="group">
           <button
             type="button"
@@ -373,6 +438,31 @@ export function ReviewList({ companyId, className = '' }: ReviewListProps) {
           ))
         )}
       </div>
+      
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <button
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={pagination.page <= 1 || loading}
+            className="px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50"
+          >
+            Previous
+          </button>
+          
+          <div className="text-sm text-gray-700">
+            Page {pagination.page} of {pagination.totalPages}
+          </div>
+          
+          <button
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={pagination.page >= pagination.totalPages || loading}
+            className="px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

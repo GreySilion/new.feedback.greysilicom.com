@@ -70,7 +70,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
         COALESCE(SUM(c.feedback_sent), 0) as feedback_sent
       FROM companies c
       LEFT JOIN reviews r ON c.id = r.company_id
-      WHERE c.owner_id = ? ${companyCondition}`,
+      WHERE c.user_id = ? ${companyCondition}`,
       queryParams
     );
 
@@ -84,7 +84,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
         COUNT(*) as count
       FROM reviews r
       JOIN companies c ON r.company_id = c.id
-      WHERE c.owner_id = ? ${companyCondition}
+      WHERE c.user_id = ? ${companyCondition}
       GROUP BY r.rating
       ORDER BY r.rating`,
       queryParams
@@ -97,7 +97,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
         COUNT(*) as count
       FROM reviews r
       JOIN companies c ON r.company_id = c.id
-      WHERE c.owner_id = ? ${companyCondition}
+      WHERE c.user_id = ? ${companyCondition}
       GROUP BY r.status`,
       queryParams
     );
@@ -116,7 +116,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
         c.name as company_name
       FROM reviews r
       JOIN companies c ON r.company_id = c.id
-      WHERE c.owner_id = ? ${companyCondition}
+      WHERE c.user_id = ? ${companyCondition}
       ORDER BY COALESCE(r.date, r.created_at) DESC
       LIMIT 5`,
       queryParams
@@ -134,7 +134,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
           SELECT AVG(rating) FROM reviews WHERE company_id = c.id
         ), 0) as average_rating
       FROM companies c
-      WHERE c.owner_id = ? ${companyCondition}
+      WHERE c.user_id = ? ${companyCondition}
       ORDER BY c.name`,
       queryParams
     );

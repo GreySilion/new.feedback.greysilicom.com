@@ -8,7 +8,7 @@ export interface Review {
   reply: string | null;
   title: string | null;
   date: string | null;
-  status: number | null; // 1 = replied, 0 or null = pending
+  status: number | null; 
   reason: string | null;
   created_at: string | null;
   updated_at: string | null;
