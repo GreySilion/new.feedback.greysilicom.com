@@ -205,10 +205,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<C
     }
 
     try {
-      // First, verify the user exists and get their details
-      console.log('13. Checking if user exists in database');
+      // Verify the user exists
+      console.log('13. Verifying user exists');
       const [userRows] = await connection.query<RowDataPacket[]>(
-        'SELECT id, role FROM users WHERE id = ?',
+        'SELECT id FROM users WHERE id = ?',
         [session.user.id]
       );
 
@@ -217,13 +217,13 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<C
         throw new Error(`User with ID ${session.user.id} not found in database`);
       }
 
-      const user = userRows[0];
-      console.log('15. Found user:', { userId: user.id, role: user.role });
+      const userId = userRows[0].id;
+      console.log('15. Found user with ID:', userId);
       
       const companyData = {
         name: name.trim(),
-        user_id: user.id,
-        status: 'PUBLISHED',
+        user_id: userId,
+        status: 1, // Using 1 for active/published status (tinyint)
         company_status: 1,
         description: description?.trim() || '',
         feedback_message: 'Thank you for your feedback!',
@@ -255,21 +255,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<C
       
       console.log('Company created successfully with ID:', companyId);
       
-      // If this is the user's first company, update their role to ADMIN
-      // since the database only supports 'ADMIN' or 'USER' roles
-      if (user.role === 'USER') {
-        console.log('19. Updating user role to ADMIN for user ID:', user.id);
-        try {
-          await connection.query<ResultSetHeader>(
-            'UPDATE users SET role = ? WHERE id = ?',
-            ['ADMIN', user.id]
-          );
-          console.log('20. Successfully updated user role');
-        } catch (updateError) {
-          console.error('20. Error updating user role:', updateError);
-          // Continue with the transaction even if role update fails
-        }
-      }
+      // Role management removed as it's not needed for company creation
       
       // Get the newly created company with all fields
       const [companyRows] = await connection.query<Company[]>(
