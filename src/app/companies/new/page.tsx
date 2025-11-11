@@ -52,7 +52,7 @@ export default function NewCompanyPage() {
       const requestData = {
         name: formData.name.trim(),
         description: formData.description.trim() || '',
-        status: 'PUBLISHED',
+        status: 1, // Using 1 for PUBLISHED status (matching the database schema)
         feedback_message: 'Thank you for your feedback!',
         sms_sender_id: 'FEEDBACK'
       };
