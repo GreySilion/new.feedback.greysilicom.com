@@ -9,16 +9,25 @@ const debug = process.env.NODE_ENV !== 'production';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type UserRow = {
   id: number;
-  username: string;
-  email: string;
-  password: string;
-  firstname: string;
-  lastname: string;
+  username: string | null;
+  email: string | null;
+  email_verified: Date | null;
+  image: string | null;
+  password: string | null;
   mobile: string | null;
-  status: number;
-  is_verified: number;
+  role: 'ADMIN' | 'USER';
+  is_two_factor_enabled: boolean;
+  two_factor_confirmed_at: Date | null;
+  is_oauth: boolean;
+  password_reset_token: string | null;
+  password_reset_expires: Date | null;
+  verification_token: string | null;
+  verification_token_expires: Date | null;
+  is_verified: boolean;
+  last_login_at: Date | null;
   created_at: Date;
-  updated_at: Date;
+  updated_at: Date | null;
+  deleted_at: Date | null;
 };
 
 type ResultSet = [mysql.RowDataPacket[] | mysql.RowDataPacket[][] | mysql.ResultSetHeader, mysql.FieldPacket[]];
@@ -53,8 +62,22 @@ const queryWithLog = async (sql: string, params: QueryParams = []) => {
 };
 
 export async function POST(request: Request) {
+  console.log('🔵 Signup request received');
+  
   try {
-    const { username, email, mobile, password } = await request.json();
+    const requestBody = await request.json();
+    console.log('🔵 Request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { username, email, mobile, password } = requestBody;
+    
+    // Log database connection details for debugging
+    console.log('🔵 Database connection details:', {
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      hasPassword: !!password,
+      env: process.env.NODE_ENV
+    });
 
     // Input validation
     if (!email || !password || !username) {
@@ -65,20 +88,44 @@ export async function POST(request: Request) {
     }
 
     // Check if user with the same email already exists
-    const [emailRows] = await queryWithLog(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    ) as ResultSet;
+    console.log('🔵 Checking for existing user with email:', email);
+    let emailRows;
+    try {
+      [emailRows] = await queryWithLog(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      ) as ResultSet;
+      console.log('🔵 Existing email check result:', emailRows);
+    } catch (queryError) {
+      console.error('❌ Error checking for existing email:', queryError);
+      throw new Error(`Failed to check for existing user: ${queryError.message}`);
+    }
 
     const existingEmail = emailRows as mysql.RowDataPacket[];
     if (existingEmail?.length > 0) {
       return NextResponse.json(
+        { success: false, message: 'Email already in use' },
         { status: 400 }
       );
     }
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (!password) {
+      console.error('❌ Password is required');
+      return NextResponse.json(
+        { success: false, message: 'Password is required' },
+        { status: 400 }
+      );
+    }
+    
+    let hashedPassword;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+      console.log('🔵 Password hashed successfully');
+    } catch (hashError) {
+      console.error('❌ Error hashing password:', hashError);
+      throw new Error('Failed to process password');
+    }
     const currentDate = new Date();
     const currentTimestamp = currentDate.toISOString().slice(0, 19).replace('T', ' ');
 
@@ -88,29 +135,19 @@ export async function POST(request: Request) {
         username,
         email,
         password,
-        name,
-        firstname,
-        lastname,
         mobile,
         is_verified,
-        status,
-        role,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         username,          // username
-        email,             // email
-        hashedPassword,    // password
-        username,          // name (using username as name)
-        username,          // firstname (using username as firstname)
-        username,          // lastname (using username as lastname)
-        mobile || null,    // mobile (can be null)
-        0,                 // is_verified (0 = false)
-        1,                 // status (1 = active)
-        'USER',            // role (default to 'USER')
-        currentTimestamp,  // created_at
-        currentTimestamp   // updated_at
+        email,            // email
+        hashedPassword,   // password
+        mobile || null,   // mobile
+        false,            // is_verified
+        currentTimestamp, // created_at
+        currentTimestamp  // updated_at
       ]
     ) as ResultSet;
 
@@ -120,10 +157,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         success: true,
-        message: 'Account created successfully! You can now log in.',
+        message: '🎉 Account created successfully!',
+        description: 'You can now log in with your email and password.',
         userId: insertResult.insertId,
         redirect: '/auth/login',
-        showMessage: true
+        showToast: true,
+        toastType: 'success'
       },
       { status: 201 }
     );
