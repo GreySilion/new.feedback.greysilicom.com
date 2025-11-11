@@ -1,18 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Use standalone build (for Webuzo + Apache deployment)
+  // ✅ Standalone output for production (Webuzo-friendly)
   output: 'standalone',
 
-  // ✅ Disable trailing slashes to avoid route mismatches
+  // ✅ Prevent trailing slashes to avoid routing issues
   trailingSlash: false,
 
-  // ✅ Enable React strict mode for development hygiene
+  // ✅ Enforce strict mode for React debugging
   reactStrictMode: true,
 
-  // ✅ File extensions supported for pages and routes
+  // ✅ Recognize these file extensions for pages and routes
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 
-  // ✅ Webpack configuration (prevents server build errors)
+  // ✅ Webpack configuration to fix Node.js core module issues
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -29,11 +29,22 @@ const nextConfig = {
     return config;
   },
 
-  // ✅ Skip lint and TS errors during production build
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  // ✅ Ignore ESLint errors during build (for smoother CI/CD)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 
-  // ✅ Security headers
+  // ✅ Ignore TypeScript errors during build (useful for production)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // ✅ Runtime configuration for Apache/Node environments
+  experimental: {
+    runtime: 'nodejs',
+  },
+
+  // ✅ Security headers for production
   async headers() {
     return [
       {
