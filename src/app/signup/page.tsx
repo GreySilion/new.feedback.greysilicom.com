@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Validation schema
 const formSchema = z.object({
@@ -30,6 +31,8 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const searchParams = useSearchParams();
+  const signupSuccess = searchParams.get('signup') === 'success';
 
   const {
     register,
@@ -71,17 +74,63 @@ export default function SignupPage() {
         throw new Error(result.message || 'Signup failed');
       }
 
-      // Redirect to login page on successful signup
+      // Show success message
+      toast.success('🎉 Account created successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        icon: <CheckCircle className="text-green-500" />,
+      });
+
+      // Wait a moment for the user to see the success message
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Redirect to login page
       router.push('/login?signup=success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during signup');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during signup';
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Show success toast when redirected from signup
+  useEffect(() => {
+    if (signupSuccess) {
+      toast.success('🎉 Account created successfully!', {
+        duration: 5000,
+        position: 'top-center',
+        icon: <CheckCircle className="text-green-500" />,
+      });
+    }
+  }, [signupSuccess]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 relative">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          className: 'bg-white text-gray-800 shadow-lg rounded-lg p-4 font-medium',
+          success: {
+            className: 'border-l-4 border-green-500',
+            iconTheme: {
+              primary: '#10B981',
+              secondary: 'white',
+            },
+          },
+          error: {
+            className: 'border-l-4 border-red-500',
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: 'white',
+            },
+          },
+        }}
+      />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
